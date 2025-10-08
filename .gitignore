@@ -1,0 +1,13 @@
+# Build artifacts
+*.o
+
+# NuttX build artifacts
+.depend
+Make.dep
+.kconfig
+/Kconfig
+*.built
+
+# Dev tools
+compile_commands.json
+.cache/

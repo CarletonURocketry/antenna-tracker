@@ -1,0 +1,23 @@
+config ANTENNA_TRACKER
+        tristate "Antenna Tracker"
+        default y
+        ---help---
+                Enable the Antenna Tracking app
+
+config ANTENNA_TRACKER_PROGNAME
+        string "Program name"
+        default "tracker"
+        depends on ANTENNA_TRACKER
+        ---help---
+                This is the name of the program that will be used when the NSH ELF
+                program is installed.
+
+config ANTENNA_TRACKER_PRIORITY
+        int "Antenna tracker task priority"
+        default 100
+        depends on ANTENNA_TRACKER
+
+config ANTENNA_TRACKER_STACKSIZE
+        int "Antenna tracker stack size"
+        default DEFAULT_TASK_STACKSIZE
+        depends on ANTENNA_TRACKER
