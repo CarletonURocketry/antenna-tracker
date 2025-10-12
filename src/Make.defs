@@ -1,3 +1,0 @@
-ifneq ($(CONFIG_ANTENNA_TRACKER),)
-CONFIGURED_APPS += $(APPDIR)/antenna-tracker/src
-endif
