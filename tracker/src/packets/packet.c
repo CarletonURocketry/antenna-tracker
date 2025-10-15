@@ -3,6 +3,12 @@
 // #include "../syslogging.h"
 #include "packet.h"
 
+#define CONFIG_INSPACE_TELEMETRY_CALLSIGN "VA3ZZA"
+
+// Stub logging functions
+static void inerr(const char* __attribute__((unused)) fmt, ...) { }
+static void inwarn(const char* __attribute__((unused)) fmt, ...) { }
+
 /* Get the absolute timestamp that should be used for a packet created
  * at the given mission time
  */

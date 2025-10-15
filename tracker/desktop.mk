@@ -3,7 +3,7 @@ CFLAGS = -Wall -Wextra
 OUT = tracker
 
 SRCDIR = $(abspath ./src)
-SRCS = $(wildcard $(SRCDIR)/*.c)
+SRCS = $(shell find $(SRCDIR) -name "*.c")
 
 OBJS = $(patsubst %.c,%.o,$(SRCS))
 
