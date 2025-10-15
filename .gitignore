@@ -11,3 +11,6 @@ Make.dep
 # Dev tools
 compile_commands.json
 .cache/
+
+# Compiled source files
+tracker/tracker
