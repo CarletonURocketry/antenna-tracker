@@ -13,12 +13,15 @@ parsed_packet parse_packet(char* buffer){
     // Offset for the packet header
     size_t offset = sizeof(pkt_hdr_t);
 
-    // Create a struct to hold the parsed packet
     parsed_packet packet;
+
+    // Should we clear memory to 0 for each packet? Or keep previous values if block not present?
+    // For now last known values if block not present.
+    // Reasoning: If we don't have the position at a given time, the tracker might go into a bad state/return to default position instead of staying where it is.
+    // memset(&packet, 0, sizeof(packet));
 
     for (uint8_t i = 0; i < header->blocks; i++) {
         blk_hdr_t* block = (blk_hdr_t*)(buffer + offset);
-        printf("Block %u type: %u\n", i, block->type);
 
         size_t block_size = sizeof(blk_hdr_t) + blk_body_len(block->type);
         offset += block_size;
@@ -89,19 +92,19 @@ parsed_packet parse_packet(char* buffer){
 
 
     // Print the parsed packet data
-    printf("Parsed Packet:\n");
-    printf("Altitude Sea: %d\n", packet.alt_sea.altitude);
-    printf("Altitude Launch: %d\n", packet.alt_launch.altitude);
-    printf("Temperature: %d\n", packet.temp.temperature);
-    printf("Pressure: %d\n", packet.pres.pressure);
-    printf("Humidity: %d\n", packet.hum.humidity);
-    printf("Angular Velocity: x=%d, y=%d, z=%d\n", packet.ang_vel.x, packet.ang_vel.y, packet.ang_vel.z);
-    printf("Acceleration: x=%d, y=%d, z=%d\n", packet.accel.x, packet.accel.y, packet.accel.z);
-    printf("Magnetic: x=%d, y=%d, z=%d\n", packet.mag.x, packet.mag.y, packet.mag.z);
-    printf("Coordinates: lat=%d, lon=%d\n", packet.coord.latitude, packet.coord.longitude);
-    printf("Voltage: %d\n", packet.volt.voltage);
-    printf("Status: %u\n", packet.status.status_code);
-    printf("Error: %u\n", packet.error.error_code);
+    // printf("--------------Block count: %u--------------\n", header->blocks);
+    // printf("Altitude Sea: %d\n", packet.alt_sea.altitude);
+    // printf("Altitude Launch: %d\n", packet.alt_launch.altitude);
+    // printf("Temperature: %d\n", packet.temp.temperature);
+    // printf("Pressure: %d\n", packet.pres.pressure);
+    // printf("Humidity: %d\n", packet.hum.humidity);
+    // printf("Angular Velocity: x=%d, y=%d, z=%d\n", packet.ang_vel.x, packet.ang_vel.y, packet.ang_vel.z);
+    // printf("Acceleration: x=%d, y=%d, z=%d\n", packet.accel.x, packet.accel.y, packet.accel.z);
+    // printf("Magnetic: x=%d, y=%d, z=%d\n", packet.mag.x, packet.mag.y, packet.mag.z);
+    // printf("Coordinates: lat=%d, lon=%d\n", packet.coord.latitude, packet.coord.longitude);
+    // printf("Voltage: %d\n", packet.volt.voltage);
+    // printf("Status: %u\n", packet.status.status_code);
+    // printf("Error: %u\n", packet.error.error_code);
 
     return packet;
 }
