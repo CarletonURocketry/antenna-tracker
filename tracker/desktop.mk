@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra
+CFLAGS = -Wall -Wextra -DDESKTOP_BUILD
 OUT = tracker
 
 SRCDIR = $(abspath ./src)

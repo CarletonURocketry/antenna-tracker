@@ -1,13 +1,8 @@
 #include <string.h>
 
-// #include "../syslogging.h"
 #include "packet.h"
-
-#define CONFIG_INSPACE_TELEMETRY_CALLSIGN "VA3ZZA"
-
-// Stub logging functions
-static void inerr(const char* __attribute__((unused)) fmt, ...) { }
-static void inwarn(const char* __attribute__((unused)) fmt, ...) { }
+#include "../syslogging.h"
+#include "../defs.h"
 
 /* Get the absolute timestamp that should be used for a packet created
  * at the given mission time
@@ -64,12 +59,12 @@ static int16_t *block_timestamp(uint8_t *block_body) { return (int16_t *)(block_
  */
 void pkt_hdr_init(pkt_hdr_t *p, uint8_t packet_number, uint32_t mission_time) {
     // Don't include the null-terminator
-    int callsign_length = sizeof(CONFIG_INSPACE_TELEMETRY_CALLSIGN) - 1;
-    if (sizeof(CONFIG_INSPACE_TELEMETRY_CALLSIGN) - 1 < sizeof(p->call_sign)) {
-        memcpy(&p->call_sign, CONFIG_INSPACE_TELEMETRY_CALLSIGN, callsign_length);
+    int callsign_length = sizeof(ANTENNA_TRACKER_TELEMETRY_CALLSIGN) - 1;
+    if (sizeof(ANTENNA_TRACKER_TELEMETRY_CALLSIGN) - 1 < sizeof(p->call_sign)) {
+        memcpy(&p->call_sign, ANTENNA_TRACKER_TELEMETRY_CALLSIGN, callsign_length);
         memset(&p->call_sign[callsign_length], '0', sizeof(p->call_sign) - callsign_length);
     } else {
-        memcpy(&p->call_sign, CONFIG_INSPACE_TELEMETRY_CALLSIGN, sizeof(p->call_sign));
+        memcpy(&p->call_sign, ANTENNA_TRACKER_TELEMETRY_CALLSIGN, sizeof(p->call_sign));
     }
 
     p->packet_num = packet_number;

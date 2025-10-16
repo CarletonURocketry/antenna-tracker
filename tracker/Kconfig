@@ -21,3 +21,8 @@ config ANTENNA_TRACKER_STACKSIZE
         int "Antenna tracker stack size"
         default DEFAULT_TASK_STACKSIZE
         depends on ANTENNA_TRACKER
+
+config ANTENNA_TRACKER_TELEMETRY_CALLSIGN
+        string "Telemetry callsign"
+        default "VA3ZZA"
+        depends on ANTENNA_TRACKER
