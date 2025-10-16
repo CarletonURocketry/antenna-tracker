@@ -17,3 +17,6 @@ tracker/tracker
 
 # macOS
 .DS_Store
+
+# Editor Specific Dirs
+./vscode
