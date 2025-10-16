@@ -1,5 +1,7 @@
-#ifndef _INSPACE_SYSLOGGING_H_
-#define _INSPACE_SYSLOGGING_H_
+#ifndef _ANTENNA_TRACKER_SYSLOGGING_H_
+#define _ANTENNA_TRACKER_SYSLOGGING_H_
+
+#include "tracker.h"
 
 #ifndef DESKTOP_BUILD
 #include <nuttx/config.h>
@@ -9,7 +11,7 @@
 
 /* Debug output */
 
-#ifdef CONFIG_INSPACE_SYSLOG_DEBUG
+#ifdef CONFIG_ANTENNA_TRACKER_SYSLOG_DEBUG
 #define indebug(fstring, ...) syslog_tee(__HLOGSTR(fstring), __FUNCTION__ __VA_OPT__(, ) __VA_ARGS__)
 #else
 #define indebug(fstring, ...)
@@ -17,7 +19,7 @@
 
 /* Info output */
 
-#ifdef CONFIG_INSPACE_SYSLOG_INFO
+#ifdef CONFIG_ANTENNA_TRACKER_SYSLOG_INFO
 #define ininfo(fstring, ...) syslog_tee(__HLOGSTR(fstring), __FUNCTION__ __VA_OPT__(, ) __VA_ARGS__)
 #else
 #define ininfo(fstring, ...)
@@ -25,7 +27,7 @@
 
 /* Warning output */
 
-#ifdef CONFIG_INSPACE_SYSLOG_WARN
+#ifdef CONFIG_ANTENNA_TRACKER_SYSLOG_WARN
 #define inwarn(fstring, ...) syslog_tee(__HLOGSTR(fstring), __FUNCTION__ __VA_OPT__(, ) __VA_ARGS__)
 #else
 #define inwarn(fstring, ...)
@@ -33,10 +35,13 @@
 
 /* Error output */
 
-#ifdef CONFIG_INSPACE_SYSLOG_ERR
+#ifdef CONFIG_ANTENNA_TRACKER_SYSLOG_ERR
 #define inerr(fstring, ...) syslog_tee(__HLOGSTR(fstring), __FUNCTION__ __VA_OPT__(, ) __VA_ARGS__)
 #else
 #define inerr(fstring, ...)
 #endif
 
-#endif // _INSPACE_SYSLOGGING_H_
+int setup_syslogging(void);
+void syslog_tee(const char *fmt, ...);
+
+#endif // _ANTENNA_TRACKER_SYSLOGGING_H_

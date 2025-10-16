@@ -1,8 +1,8 @@
 #include <string.h>
+#include "../tracker.h"
 
 #include "packet.h"
 #include "../syslogging.h"
-#include "../defs.h"
 
 /* Get the absolute timestamp that should be used for a packet created
  * at the given mission time

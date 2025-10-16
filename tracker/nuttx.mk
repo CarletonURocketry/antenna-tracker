@@ -7,5 +7,6 @@ MODULE = $(CONFIG_ANTENNA_TRACKER)
 
 MAINSRC = src/tracker.c
 CSRCS += $(wildcard src/**/*.c)
+CSRCS += $(wildcard src/*.c)
 
 include $(APPDIR)/Application.mk
