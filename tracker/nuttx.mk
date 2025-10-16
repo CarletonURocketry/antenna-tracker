@@ -6,5 +6,6 @@ STACKSIZE = $(CONFIG_ANTENNA_TRACKER_STACKSIZE)
 MODULE = $(CONFIG_ANTENNA_TRACKER)
 
 MAINSRC = src/tracker.c
+CSRCS += $(wildcard src/**/*.c)
 
 include $(APPDIR)/Application.mk
