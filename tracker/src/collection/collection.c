@@ -8,7 +8,7 @@
 
 void* collection_main(void* args){
 
-    FILE* telem_file = fopen("./mocking/el_blasto.hex", "r");
+    FILE* telem_file = fopen("./mocking/old-el-blasto/el_blasto.hex", "r");
     if(telem_file == NULL){
         inerr("Failed to open telem file: %s\n", strerror(errno));
         pthread_exit(NULL);
