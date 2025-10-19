@@ -35,21 +35,6 @@ parsed_packet parse_packet(char* buffer){
                 packet.alt_launch = *alt_block;
                 break;
             }
-            case DATA_TEMP: {
-                struct temp_blk_t* temp_block = (struct temp_blk_t*)block_body((uint8_t*)block);
-                packet.temp = *temp_block;
-                break;
-            }
-            case DATA_PRESSURE: {
-                struct pres_blk_t* pres_block = (struct pres_blk_t*)block_body((uint8_t*)block);
-                packet.pres = *pres_block;
-                break;
-            }
-            case DATA_HUMIDITY: {
-                struct hum_blk_t* hum_block = (struct hum_blk_t*)block_body((uint8_t*)block);
-                packet.hum = *hum_block;
-                break;
-            }
             case DATA_ANGULAR_VEL: {
                 struct ang_vel_blk_t* ang_vel_block = (struct ang_vel_blk_t*)block_body((uint8_t*)block);
                 packet.ang_vel = *ang_vel_block;
@@ -60,29 +45,9 @@ parsed_packet parse_packet(char* buffer){
                 packet.accel = *accel_block;
                 break;
             }
-            case DATA_MAGNETIC: {
-                struct mag_blk_t* mag_block = (struct mag_blk_t*)block_body((uint8_t*)block);
-                packet.mag = *mag_block;
-                break;
-            }
             case DATA_LAT_LONG: {
                 struct coord_blk_t* coord_block = (struct coord_blk_t*)block_body((uint8_t*)block);
                 packet.coord = *coord_block;
-                break;
-            }
-            case DATA_VOLTAGE: {
-                struct volt_blk_t* volt_block = (struct volt_blk_t*)block_body((uint8_t*)block);
-                packet.volt = *volt_block;
-                break;
-            }
-            case DATA_STATUS: {
-                struct status_blk_t* status_block = (struct status_blk_t*)block_body((uint8_t*)block);
-                packet.status = *status_block;
-                break;
-            }
-            case DATA_ERROR: {
-                struct error_blk_t* error_block = (struct error_blk_t*)block_body((uint8_t*)block);
-                packet.error = *error_block;
                 break;
             }
         }
@@ -93,16 +58,9 @@ parsed_packet parse_packet(char* buffer){
     printf("--------------Block count: %u--------------\n", header->blocks);
     printf("Altitude Sea: %d\n", packet.alt_sea.altitude);
     printf("Altitude Launch: %d\n", packet.alt_launch.altitude);
-    printf("Temperature: %d\n", packet.temp.temperature);
-    printf("Pressure: %d\n", packet.pres.pressure);
-    printf("Humidity: %d\n", packet.hum.humidity);
     printf("Angular Velocity: x=%d, y=%d, z=%d\n", packet.ang_vel.x, packet.ang_vel.y, packet.ang_vel.z);
     printf("Acceleration: x=%d, y=%d, z=%d\n", packet.accel.x, packet.accel.y, packet.accel.z);
-    printf("Magnetic: x=%d, y=%d, z=%d\n", packet.mag.x, packet.mag.y, packet.mag.z);
     printf("Coordinates: lat=%d, lon=%d\n", packet.coord.latitude, packet.coord.longitude);
-    printf("Voltage: %d\n", packet.volt.voltage);
-    printf("Status: %u\n", packet.status.status_code);
-    printf("Error: %u\n", packet.error.error_code);
 
     return packet;
 }
