@@ -30,11 +30,6 @@ parsed_packet parse_packet(char* buffer){
                 packet.alt_sea = *alt_block;
                 break;
             }
-            case DATA_ALT_LAUNCH: {
-                struct alt_blk_t* alt_block = (struct alt_blk_t*)block_body((uint8_t*)block);
-                packet.alt_launch = *alt_block;
-                break;
-            }
             case DATA_ANGULAR_VEL: {
                 struct ang_vel_blk_t* ang_vel_block = (struct ang_vel_blk_t*)block_body((uint8_t*)block);
                 packet.ang_vel = *ang_vel_block;
@@ -57,7 +52,6 @@ parsed_packet parse_packet(char* buffer){
     // Print the parsed packet data
     printf("--------------Block count: %u--------------\n", header->blocks);
     printf("Altitude Sea: %d\n", packet.alt_sea.altitude);
-    printf("Altitude Launch: %d\n", packet.alt_launch.altitude);
     printf("Angular Velocity: x=%d, y=%d, z=%d\n", packet.ang_vel.x, packet.ang_vel.y, packet.ang_vel.z);
     printf("Acceleration: x=%d, y=%d, z=%d\n", packet.accel.x, packet.accel.y, packet.accel.z);
     printf("Coordinates: lat=%d, lon=%d\n", packet.coord.latitude, packet.coord.longitude);

@@ -7,7 +7,6 @@ typedef struct {
     uint16_t timestamp;
     uint8_t packet_num;
     struct alt_blk_t alt_sea;
-    struct alt_blk_t alt_launch;
     struct ang_vel_blk_t ang_vel;
     struct accel_blk_t accel;
     struct coord_blk_t coord;
