@@ -8,6 +8,7 @@
 #define CONFIG_ANTENNA_TRACKER_SYSLOG_ERR 1
 #define CONFIG_ANTENNA_TRACKER_SYSLOG_WARN 1
 // #define CONFIG_ANTENNA_TRACKER_SYSLOG_PATH "antenna-tracker.log"
+#define CONFIG_ANTENNA_TRACKER_MOCKING 1
 #endif
 
 #include "syslogging.h"

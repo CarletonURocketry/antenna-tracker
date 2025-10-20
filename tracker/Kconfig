@@ -47,3 +47,8 @@ config ANTENNA_TRACKER_SYSLOG_WARN
         bool "Enable syslog warning output"
         default y
         depends on ANTENNA_TRACKER
+
+config ANTENNA_TRACKER_MOCKING
+        bool "Enable mocking"
+        default n
+        depends on ANTENNA_TRACKER
