@@ -5,10 +5,11 @@
 #include "../packets/packet.h"
 #include <pthread.h>
 #include "radio.h"
+#include "mocking/el_blasto.h"
 
 void* collection_main(void* args){
 
-    FILE* telem_file = fopen("./mocking/el_blasto.hex", "r");
+    FILE* telem_file = fmemopen(EL_BLASTO_RAW_HEX, sizeof(EL_BLASTO_RAW_HEX), "r");
     if(telem_file == NULL){
         inerr("Failed to open telem file: %s\n", strerror(errno));
         pthread_exit(NULL);
@@ -30,7 +31,6 @@ void* collection_main(void* args){
         parse_packet(buffer);
     }
 
-    fclose(telem_file);
     ininfo("Telem file closed");
 
     pthread_exit(NULL);
