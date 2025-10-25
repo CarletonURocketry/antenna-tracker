@@ -7,62 +7,14 @@
 #include <string.h>
 
 #include "collection.h"
-#include <nuttx/uorb.h>
+#include <uORB/uORB.h>
 #include <poll.h>
 
 #define TENTH_DEGREE_TO_RAD 3.18309886184
 
-/* Setup UORB topics */
-
-enum uorb_sensors {
-    SENSOR_ACCEL,  /* Accelerometer */
-    SENSOR_GYRO,   /* Gyroscope */
-    SENSOR_BARO,   /* Barometer */
-    SENSOR_MAG,    /* Magnetometer */
-    SENSOR_GNSS,   /* GNSS */
-    SENSOR_ALT,    /* Altitude fusion */
-    SENSOR_ERROR,  /* Error messages */
-    SENSOR_STATUS, /* Status messages */
-};
-
-union uorb_data {
-    struct sensor_accel accel;
-    struct sensor_gyro gyro;
-    struct sensor_baro baro;
-    struct sensor_mag mag;
-    struct sensor_gnss gnss;
-
-    struct fusion_altitude alt;
-    struct error_message error;
-    struct status_message status;
-};
-
-static struct pollfd uorb_fds[] = {
-    [SENSOR_ACCEL] = {.fd = -1, .events = POLLIN, .revents = 0},
-    [SENSOR_GYRO] = {.fd = -1, .events = POLLIN, .revents = 0},
-    [SENSOR_BARO] = {.fd = -1, .events = POLLIN, .revents = 0},
-    [SENSOR_MAG] = {.fd = -1, .events = POLLIN, .revents = 0},
-    [SENSOR_GNSS] = {.fd = -1, .events = POLLIN, .revents = 0},
-    [SENSOR_ALT] = {.fd = -1, .events = POLLIN, .revents = 0},
-    [SENSOR_ERROR] = {.fd = -1, .events = POLLIN, .revents = 0},
-    [SENSOR_STATUS] = {.fd = -1, .events = POLLIN, .revents = 0},
-};
-
-ORB_DECLARE(sensor_accel);
-ORB_DECLARE(sensor_gyro);
-ORB_DECLARE(sensor_baro);
-ORB_DECLARE(sensor_mag);
-ORB_DECLARE(sensor_gnss);
-ORB_DECLARE(fusion_altitude);
-
-static struct orb_metadata const *uorb_metas[] = {
-    [SENSOR_ACCEL] = ORB_ID(sensor_accel),  [SENSOR_GYRO] = ORB_ID(sensor_gyro),
-    [SENSOR_BARO] = ORB_ID(sensor_baro),    [SENSOR_MAG] = ORB_ID(sensor_mag),
-    [SENSOR_GNSS] = ORB_ID(sensor_gnss),    [SENSOR_ALT] = ORB_ID(fusion_altitude),
-    [SENSOR_ERROR] = ORB_ID(error_message), [SENSOR_STATUS] = ORB_ID(status_message),
-};
-
 void *collection_main(void *args) {
+
+    orb_advertise_multi_queue();
 
     FILE *telem_file = fopen("./mocking/el_blasto.hex", "r");
     if (telem_file == NULL) {
@@ -109,7 +61,7 @@ void *collection_main(void *args) {
                                  .x = packet.mag.x * 10,
                                  .y = packet.mag.y * 10,
                                  .z = packet.mag.z * 10};
-        
+
     }
 
     fclose(telem_file);
