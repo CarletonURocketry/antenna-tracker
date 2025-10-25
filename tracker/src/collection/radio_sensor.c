@@ -1,3 +1,29 @@
+/****************************************************************************
+ * drivers/sensors/radiosensor_uorb.c
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.  The
+ * ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the
+ * License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ *
+ ****************************************************************************/
+
+/****************************************************************************
+ * Included Files
+ ****************************************************************************/
+
 #include <nuttx/config.h>
 
 #include <fcntl.h>
@@ -18,7 +44,11 @@
 
 #include "radio_sensor.h"
 
-struct radio_sensor_s
+/****************************************************************************
+ * Private Types
+ ****************************************************************************/
+
+struct radiosensor_s
 {
   union
     {
@@ -36,11 +66,36 @@ struct radio_sensor_s
   volatile bool running;
 };
 
-static struct sensor_ops_s g_fakesensor_ops =
+/****************************************************************************
+ * Private Function Prototypes
+ ****************************************************************************/
+
+static int radiosensor_activate(FAR struct sensor_lowerhalf_s *lower,
+                               FAR struct file *filep, bool enable);
+static int radiosensor_set_interval(FAR struct sensor_lowerhalf_s *lower,
+                                   FAR struct file *filep,
+                                   FAR uint32_t *period_us);
+static int radiosensor_batch(FAR struct sensor_lowerhalf_s *lower,
+                            FAR struct file *filep,
+                            FAR uint32_t *latency_us);
+static int fakegnss_activate(FAR struct gnss_lowerhalf_s *lower,
+                             FAR struct file *filep, bool sw);
+static int fakegnss_set_interval(FAR struct gnss_lowerhalf_s *lower,
+                                 FAR struct file *filep,
+                                 FAR uint32_t *period_us);
+static void radiosensor_push_event(FAR struct radiosensor_s *sensor,
+                                  uint64_t event_timestamp);
+static int radiosensor_thread(int argc, char** argv);
+
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+static struct sensor_ops_s g_radiosensor_ops =
 {
-  .activate = fakesensor_activate,
-  .set_interval = fakesensor_set_interval,
-  .batch = fakesensor_batch,
+  .activate = radiosensor_activate,
+  .set_interval = radiosensor_set_interval,
+  .batch = radiosensor_batch,
 };
 
 static struct gnss_ops_s g_fakegnss_ops =
@@ -49,10 +104,271 @@ static struct gnss_ops_s g_fakegnss_ops =
   .set_interval = fakegnss_set_interval,
 };
 
-int radio_sensor_init(int type, FAR const char *file_name,
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+static int radiosensor_read_csv_line(FAR struct file *file,
+                                    FAR char *buffer, int len, int start)
+{
+  int i;
+
+  len = file_read(file, buffer, len);
+  if (len == 0)
+    {
+      /* Loop reads */
+
+      file_seek(file, start, SEEK_SET);
+      len = file_read(file, buffer, len);
+    }
+
+  for (i = 0; i < len; i++)
+    {
+      if (buffer[i] == '\n')
+        {
+          file_seek(file, i - len + 1, SEEK_CUR);
+          buffer[i + 1] = '\0';
+          break;
+        }
+    }
+
+  return i + 1;
+}
+
+static int radiosensor_read_csv_header(FAR struct radiosensor_s *sensor)
+{
+  char buffer[40];
+
+  /* Set interval */
+
+  sensor->raw_start =
+      radiosensor_read_csv_line(&sensor->data, buffer, sizeof(buffer), 0);
+  if (sensor->interval == 0)
+    {
+      sscanf(buffer, "interval:%"PRIu32"\n", &sensor->interval);
+      sensor->interval *= 1000;
+    }
+
+  /*  Skip the CSV header */
+
+  sensor->raw_start +=
+      radiosensor_read_csv_line(&sensor->data, buffer, sizeof(buffer), 0);
+  return OK;
+}
+
+static inline void radiosensor_read_accel(FAR struct radiosensor_s *sensor,
+                                         uint64_t event_timestamp)
+{
+  struct sensor_accel accel;
+  char raw[50];
+  radiosensor_read_csv_line(
+          &sensor->data, raw, sizeof(raw), sensor->raw_start);
+  sscanf(raw, "%f,%f,%f\n", &accel.x, &accel.y, &accel.z);
+  accel.temperature = NAN;
+  accel.timestamp = event_timestamp;
+  sensor->lower.push_event(sensor->lower.priv, &accel,
+                    sizeof(struct sensor_accel));
+}
+
+static inline void radiosensor_read_mag(FAR struct radiosensor_s *sensor,
+                                       uint64_t event_timestamp)
+{
+  struct sensor_mag mag;
+  char raw[50];
+  radiosensor_read_csv_line(
+          &sensor->data, raw, sizeof(raw), sensor->raw_start);
+  sscanf(raw, "%f,%f,%f\n", &mag.x, &mag.y, &mag.z);
+  mag.temperature = NAN;
+  mag.timestamp = event_timestamp;
+  sensor->lower.push_event(sensor->lower.priv, &mag,
+                           sizeof(struct sensor_mag));
+}
+
+static inline void radiosensor_read_gyro(FAR struct radiosensor_s *sensor,
+                                        uint64_t event_timestamp)
+{
+  struct sensor_gyro gyro;
+  char raw[50];
+  radiosensor_read_csv_line(
+          &sensor->data, raw, sizeof(raw), sensor->raw_start);
+  sscanf(raw, "%f,%f,%f\n", &gyro.x, &gyro.y, &gyro.z);
+  gyro.temperature = NAN;
+  gyro.timestamp = event_timestamp;
+  sensor->lower.push_event(sensor->lower.priv, &gyro,
+                    sizeof(struct sensor_gyro));
+}
+
+static inline void radiosensor_read_baro(FAR struct radiosensor_s *sensor,
+                                        uint64_t event_timestamp)
+{
+  struct sensor_baro baro;
+  char raw[50];
+
+  radiosensor_read_csv_line(&sensor->data, raw, sizeof(raw),
+                           sensor->raw_start);
+  sscanf(raw, "%f,%f\n", &baro.pressure, &baro.temperature);
+  baro.timestamp = event_timestamp;
+  sensor->lower.push_event(sensor->lower.priv, &baro,
+                           sizeof(struct sensor_baro));
+}
+
+static inline void radiosensor_read_gnss(FAR struct radiosensor_s *sensor)
+{
+  char raw[150];
+
+  while (1)
+    {
+      radiosensor_read_csv_line(&sensor->data, raw,
+                               sizeof(raw), sensor->raw_start);
+      sensor->gnss.push_data(sensor->gnss.priv, raw,
+                             strlen(raw), true);
+      if (strstr(raw, "GGA") != NULL)
+        {
+          break;
+        }
+    }
+}
+
+static int radiosensor_activate(FAR struct sensor_lowerhalf_s *lower,
+                               FAR struct file *filep, bool enable)
+{
+  FAR struct radiosensor_s *sensor = container_of(lower,
+                                                 struct radiosensor_s, lower);
+  if (enable)
+    {
+      sensor->running = true;
+
+      /* Wake up the thread */
+
+      nxsem_post(&sensor->wakeup);
+    }
+  else
+    {
+      sensor->running = false;
+    }
+
+  return OK;
+}
+
+static int fakegnss_activate(FAR struct gnss_lowerhalf_s *lower,
+                             FAR struct file *filep, bool enable)
+{
+  return radiosensor_activate((FAR void *)lower, filep, enable);
+}
+
+static int radiosensor_set_interval(FAR struct sensor_lowerhalf_s *lower,
+                                   FAR struct file *filep,
+                                   FAR uint32_t *period_us)
+{
+  FAR struct radiosensor_s *sensor = container_of(lower,
+                                                 struct radiosensor_s, lower);
+  sensor->interval = *period_us;
+  return OK;
+}
+
+static int fakegnss_set_interval(FAR struct gnss_lowerhalf_s *lower,
+                                 FAR struct file *filep,
+                                 FAR uint32_t *period_us)
+{
+  return radiosensor_set_interval((FAR void *)lower, filep, period_us);
+}
+
+static int radiosensor_batch(FAR struct sensor_lowerhalf_s *lower,
+                            FAR struct file *filep,
+                            FAR uint32_t *latency_us)
+{
+  FAR struct radiosensor_s *sensor = container_of(lower,
+                                                 struct radiosensor_s, lower);
+  uint32_t max_latency = sensor->lower.nbuffer * sensor->interval;
+  if (*latency_us > max_latency)
+    {
+      *latency_us = max_latency;
+    }
+  else if (*latency_us < sensor->interval && *latency_us > 0)
+    {
+      *latency_us = sensor->interval;
+    }
+
+  sensor->batch = *latency_us;
+  return OK;
+}
+
+void radiosensor_push_event(FAR struct radiosensor_s *sensor,
+                           uint64_t event_timestamp)
+{
+  switch (sensor->type)
+  {
+    case SENSOR_TYPE_ACCELEROMETER:
+      radiosensor_read_accel(sensor, event_timestamp);
+      break;
+
+    case SENSOR_TYPE_MAGNETIC_FIELD:
+      radiosensor_read_mag(sensor, event_timestamp);
+      break;
+
+    case SENSOR_TYPE_GYROSCOPE:
+      radiosensor_read_gyro(sensor, event_timestamp);
+      break;
+
+    case SENSOR_TYPE_BAROMETER:
+      radiosensor_read_baro(sensor, event_timestamp);
+      break;
+
+    case SENSOR_TYPE_GNSS:
+    case SENSOR_TYPE_GNSS_SATELLITE:
+      radiosensor_read_gnss(sensor);
+      break;
+
+    default:
+      snerr("radiosensor: unsupported type sensor type\n");
+      break;
+  }
+}
+
+static int radiosensor_thread(int argc, char** argv)
+{
+  FAR struct radiosensor_s *sensor = (FAR struct radiosensor_s *)
+        ((uintptr_t)strtoul(argv[1], NULL, 16));
+  int ret;
+
+  while (true)
+    {
+     
+    }
+}
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: radiosensor_init
+ *
+ * Description:
+ *   This function generates a sensor node under /dev/uorb/. And then
+ *   report the data from csv file.
+ *
+ * Input Parameters:
+ *   type        - The type of sensor and defined in <nuttx/sensors/sensor.h>
+ *   file_name   - The name of csv name and the file structure is as follows:
+ *                    First row : set interval, unit millisecond
+ *                    Second row: csv file header
+ *                    third row : data
+ *                    (Each line should not exceed 50 characters)
+ *                    For example:
+ *                    interval:12
+ *                    x,y,z
+ *                    2.1234,3.23443,2.23456
+ *                    ...
+ *   devno       - The user specifies which device of this type, from 0.
+ *   batch_number- The maximum number of batch
+ *
+ ****************************************************************************/
+
+int radiosensor_init(int type, FAR const char *file_name,
                     int devno, uint32_t batch_number)
 {
-  FAR struct radio_sensor_s *sensor;
+  FAR struct radiosensor_s *sensor;
   FAR char *argv[2];
   char arg1[32];
   uint32_t nbuffer[] = {
@@ -67,10 +383,10 @@ int radio_sensor_init(int type, FAR const char *file_name,
 
   /* Alloc memory for sensor */
 
-  sensor = kmm_zalloc(sizeof(struct radio_sensor_s));
+  sensor = kmm_zalloc(sizeof(struct radiosensor_s));
   if (!sensor)
     {
-      snerr("Memory cannot be allocated for fakesensor\n");
+      snerr("Memory cannot be allocated for radiosensor\n");
       return -ENOMEM;
     }
 
@@ -84,9 +400,9 @@ int radio_sensor_init(int type, FAR const char *file_name,
   snprintf(arg1, 32, "%p", sensor);
   argv[0] = arg1;
   argv[1] = NULL;
-  ret = kthread_create("fakesensor_thread", SCHED_PRIORITY_DEFAULT,
+  ret = kthread_create("radiosensor_thread", SCHED_PRIORITY_DEFAULT,
                        CONFIG_DEFAULT_TASK_STACKSIZE,
-                       fakesensor_thread, argv);
+                       radiosensor_thread, argv);
   if (ret < 0)
     {
       kmm_free(sensor);
@@ -103,7 +419,7 @@ int radio_sensor_init(int type, FAR const char *file_name,
   else
     {
       sensor->lower.type = type;
-      sensor->lower.ops = &g_fakesensor_ops;
+      sensor->lower.ops = &g_radiosensor_ops;
       sensor->lower.nbuffer = batch_number;
       sensor_register(&sensor->lower, devno);
     }
