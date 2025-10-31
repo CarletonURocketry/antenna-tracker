@@ -6,8 +6,6 @@
 #include <time.h>
 #include "../syslogging.h"
 
-#define MIN_UORB_QUEUE_SIZE 10
-
 typedef struct {
     struct sensor_gnss tracker_gnss;
     struct sensor_mag tracker_mag;
