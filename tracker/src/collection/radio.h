@@ -1,5 +1,5 @@
-#ifndef _ANTENNA_TRACKER_RADIO_H_
-#define _ANTENNA_TRACKER_RADIO_H_
+#ifndef _INSPACE_TRACKER_RADIO_H_
+#define _INSPACE_TRACKER_RADIO_H_
 
 #include "../packets/packet.h"
 

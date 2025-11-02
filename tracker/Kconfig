@@ -1,54 +1,54 @@
-config ANTENNA_TRACKER
+config INSPACE_TRACKER
         tristate "Antenna Tracker"
         default y
         ---help---
                 Enable the Antenna Tracking app
 
-config ANTENNA_TRACKER_PROGNAME
+config INSPACE_TRACKER_PROGNAME
         string "Program name"
         default "tracker"
-        depends on ANTENNA_TRACKER
+        depends on INSPACE_TRACKER
         ---help---
                 This is the name of the program that will be used when the NSH ELF
                 program is installed.
 
-config ANTENNA_TRACKER_PRIORITY
+config INSPACE_TRACKER_PRIORITY
         int "Antenna tracker task priority"
         default 100
-        depends on ANTENNA_TRACKER
+        depends on INSPACE_TRACKER
 
-config ANTENNA_TRACKER_STACKSIZE
+config INSPACE_TRACKER_STACKSIZE
         int "Antenna tracker stack size"
         default DEFAULT_TASK_STACKSIZE
-        depends on ANTENNA_TRACKER
+        depends on INSPACE_TRACKER
 
-config ANTENNA_TRACKER_TELEMETRY_CALLSIGN
+config INSPACE_TRACKER_TELEMETRY_CALLSIGN
         string "Telemetry callsign"
         default "VA3ZZA"
-        depends on ANTENNA_TRACKER
+        depends on INSPACE_TRACKER
 
 
-config ANTENNA_TRACKER_SYSLOG_INFO
+config INSPACE_TRACKER_SYSLOG_INFO
         bool "Enable syslog info output"
         default y
-        depends on ANTENNA_TRACKER
+        depends on INSPACE_TRACKER
 
-config ANTENNA_TRACKER_SYSLOG_DEBUG
+config INSPACE_TRACKER_SYSLOG_DEBUG
         bool "Enable syslog debug output"
         default n
-        depends on ANTENNA_TRACKER
+        depends on INSPACE_TRACKER
 
-config ANTENNA_TRACKER_SYSLOG_ERR
+config INSPACE_TRACKER_SYSLOG_ERR
         bool "Enable syslog error output"
         default y
-        depends on ANTENNA_TRACKER
+        depends on INSPACE_TRACKER
 
-config ANTENNA_TRACKER_SYSLOG_WARN
+config INSPACE_TRACKER_SYSLOG_WARN
         bool "Enable syslog warning output"
         default y
-        depends on ANTENNA_TRACKER
+        depends on INSPACE_TRACKER
 
-config ANTENNA_TRACKER_MOCKING
+config INSPACE_TRACKER_RADIO_MOCKING
         bool "Enable mocking"
         default n
-        depends on ANTENNA_TRACKER
+        depends on INSPACE_TRACKER

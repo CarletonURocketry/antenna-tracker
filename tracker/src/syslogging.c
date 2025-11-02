@@ -22,8 +22,8 @@ atomic_int syslog_count;
  */
 int setup_syslogging(void) {
     atomic_set(&syslog_count, 0);
-    #ifdef CONFIG_ANTENNA_TRACKER_SYSLOG_PATH
-    __syslogging_file = fopen(CONFIG_ANTENNA_TRACKER_SYSLOG_PATH, "a");
+    #ifdef CONFIG_INSPACE_TRACKER_SYSLOG_PATH
+    __syslogging_file = fopen(CONFIG_INSPACE_TRACKER_SYSLOG_PATH, "a");
     #endif
     if (__syslogging_file == NULL) {
         return errno;

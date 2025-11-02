@@ -8,7 +8,8 @@
 #include "mocking/el_blasto.h"
 
 void* collection_main(void* args){
-    #ifdef CONFIG_ANTENNA_TRACKER_MOCKING
+    #ifdef CONFIG_INSPACE_TRACKER_RADIO_MOCK 
+        ininfo("Mocking radio data")
 
         FILE* telem_file = fmemopen(EL_BLASTO_RAW_HEX, sizeof(EL_BLASTO_RAW_HEX), "r");
         if(telem_file == NULL){
@@ -34,9 +35,6 @@ void* collection_main(void* args){
 
         fclose(telem_file);
         ininfo("Telem file closed");
-    #else
-        ininfo("Mocking not enabled");  
+        pthread_exit(NULL);
     #endif
-
-    pthread_exit(NULL);
 }
