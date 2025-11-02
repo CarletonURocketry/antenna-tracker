@@ -37,6 +37,11 @@ enum {
     PAN_ANGLE
 };
 
+ORB_DECLARE(sensor_gnss);
+ORB_DECLARE(sensor_mag);
+ORB_DECLARE(sensor_baro);
+ORB_DECLARE(sensor_hinge_angle);
+
 void aim_tracker(aiming_input_telem_t *aiming_input_telem, aiming_output_angles_t *aiming_output_angles){
     /* TODO: figure out aiming algoritm */
 
@@ -55,20 +60,60 @@ void* aiming_main(void* args){
         [ROCKET_GNSS] = {.fd = -1, .events = POLLIN, .revents = 0},
     };
 
-    uorb_fds_in[TRACKER_GNSS].fd = orb_subscribe_multi(orb_get_meta("sensor_gnss"), 0);
-    uorb_fds_in[TRACKER_MAG].fd = orb_subscribe_multi(orb_get_meta("sensor_mag"), 0);
-    uorb_fds_in[TRACKER_BARO].fd = orb_subscribe_multi(orb_get_meta("sensor_baro"), 0);
-    uorb_fds_in[ROCKET_GNSS].fd = orb_subscribe_multi(orb_get_meta("sensor_gnss"), 1);
+    struct orb_metadata const *uorb_metas_in[] = {
+        [TRACKER_GNSS] = ORB_ID(sensor_gnss),
+        [TRACKER_MAG] = ORB_ID(sensor_mag),
+        [TRACKER_BARO] = ORB_ID(sensor_baro),
+        [ROCKET_GNSS] = ORB_ID(sensor_gnss),
+    };
+
+    for(int i = 0; i < sizeof(uorb_metas_in) / sizeof(uorb_metas_in[0]); i++){
+        if(uorb_metas_in[i] == NULL){
+            inerr("Error getting uORB metadata: %s\n", strerror(errno));
+            pthread_exit(NULL);
+        }
+    }
+
+    uorb_fds_in[TRACKER_GNSS].fd = orb_subscribe_multi(uorb_metas_in[TRACKER_GNSS], 0);
+    uorb_fds_in[TRACKER_MAG].fd = orb_subscribe_multi(uorb_metas_in[TRACKER_MAG], 0);
+    uorb_fds_in[TRACKER_BARO].fd = orb_subscribe_multi(uorb_metas_in[TRACKER_BARO], 0);
+    uorb_fds_in[ROCKET_GNSS].fd = orb_subscribe_multi(uorb_metas_in[ROCKET_GNSS], 1);
+
+    for(int i = 0; i < sizeof(uorb_fds_in) / sizeof(uorb_fds_in[0]); i++){
+        if(uorb_fds_in[i].fd < 0){
+            inerr("Error subscribing to uORB %s: %s\n", uorb_metas_in[i]->o_name, strerror(errno));
+            pthread_exit(NULL);
+        }
+    }
 
     struct pollfd uorb_fds_out[] = {
         [PAN_ANGLE] = {.fd = -1, .events = POLLIN, .revents = 0},
         [TILT_ANGLE] = {.fd = -1, .events = POLLIN, .revents = 0},
     };
 
-    int tilt_instance = 0;
-    int pan_instance = 1;
-    uorb_fds_out[TILT_ANGLE].fd = orb_advertise_multi_queue(orb_get_meta("sensor_hinge_angle"), NULL, &tilt_instance, 1);
-    uorb_fds_out[PAN_ANGLE].fd = orb_advertise_multi_queue(orb_get_meta("sensor_hinge_angle"), NULL, &pan_instance, 1);
+    struct orb_metadata const *uorb_metas_out[] = {
+        [PAN_ANGLE] = ORB_ID(sensor_hinge_angle),
+        [TILT_ANGLE] = ORB_ID(sensor_hinge_angle),
+    };
+
+    for(int i = 0; i < sizeof(uorb_metas_out) / sizeof(uorb_metas_out[0]); i++){
+        if(uorb_metas_out[i] == NULL){
+            inerr("Error getting uORB metadata: %s\n", strerror(errno));
+            pthread_exit(NULL);
+        }
+    }
+
+    int pan_instance = 0;
+    int tilt_instance = 1;
+    uorb_fds_out[PAN_ANGLE].fd = orb_advertise_multi_queue(uorb_metas_out[PAN_ANGLE], NULL, &pan_instance, 1);
+    uorb_fds_out[TILT_ANGLE].fd = orb_advertise_multi_queue(uorb_metas_out[TILT_ANGLE], NULL, &tilt_instance, 1);
+
+    for(int i = 0; i < sizeof(uorb_fds_out) / sizeof(uorb_fds_out[0]); i++){
+        if(uorb_fds_out[i].fd < 0){
+            inerr("Error advertising to uORB %s: %s\n", uorb_metas_out[i]->o_name, strerror(errno));
+            pthread_exit(NULL);
+        }
+    }
 
     aiming_input_telem_t aiming_input_telem;
     memset(&aiming_input_telem, 0, sizeof(aiming_input_telem));
