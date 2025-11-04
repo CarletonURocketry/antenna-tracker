@@ -22,3 +22,4 @@ tracker/tracker
 # Editor Specific Dirs
 ./vscode
 *.gcno
+*.su
