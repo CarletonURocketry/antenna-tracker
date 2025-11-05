@@ -5,6 +5,8 @@
 #include <string.h>
 #include <time.h>
 #include "../syslogging.h"
+#include "utm/utm.h"
+#include "formulas/formulas.h"
 
 typedef struct {
     struct sensor_gnss tracker_gnss;
@@ -42,8 +44,28 @@ ORB_DECLARE(sensor_mag);
 ORB_DECLARE(sensor_baro);
 ORB_DECLARE(sensor_hinge_angle);
 
-void aim_tracker(aiming_input_telem_t *aiming_input_telem, aiming_output_angles_t *aiming_output_angles){
+void aim_tracker(aiming_input_telem_t *aiming_input_telem, aiming_output_angles_t *aiming_output_angles, size_t size_aiming_input){
     /* TODO: figure out aiming algoritm */
+    // ASSUME DATA IS NON-ZERO AND WORKING
+
+    size_t last_index = size_aiming_input - 1;
+
+    UTMCoord index0_utm = latlon_to_utm(aiming_input_telem[0]->rocket_gnss.latitude, aiming_input_telem[0]->rocket_gnss.longitude);
+    UTMCoord pos = latlon_to_utm(aiming_input_telem[last_index]->rocket_gnss.latitude, aiming_input_telem[last_index]->rocket_gnss.longitude);
+    double alt = aiming_input_telem[last_index]->rocket_gnss.altitude;
+
+    // Create functions given positions, gives velocity and acceleration!!!
+
+
+
+    
+    float time_s = 0.1; // placeholder time step
+
+
+
+    pos.easting = const_accel_eq(time_s, 0, 0, pos.easting);
+    pos.northing = const_accel_eq(time_s, 0, 0, pos.northing);
+    alt = const_accel_eq(time_s, 0, 0, alt);
 
     /* generate random angles to publish for now */
     aiming_output_angles->pan_angle.angle = rand() % 360;
