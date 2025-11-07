@@ -19,5 +19,5 @@ tracker/tracker
 .DS_Store
 
 # Editor Specific Dirs
-./vscode
+.vscode
 *.gcno
