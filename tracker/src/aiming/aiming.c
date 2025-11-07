@@ -25,16 +25,21 @@ void aim_tracker(aiming_input_telem_t *aiming_input_telem, aiming_output_angles_
 
     // Create functions given positions, gives velocity and acceleration!!!
 
+    integrated_pos_t vel = get_avg_vel(aiming_input_telem, size_aiming_input);
+    integrated_pos_t accel = get_avg_accel(aiming_input_telem, size_aiming_input);
 
 
-    
-    float time_s = 0.1; // placeholder time step
 
 
+    float time_s = 1 / ITERATIONS; // One second divided by iterations per second
 
-    pos.easting = const_accel_eq(time_s, 0, 0, pos.easting);
-    pos.northing = const_accel_eq(time_s, 0, 0, pos.northing);
-    alt = const_accel_eq(time_s, 0, 0, alt);
+    for (int i =0; i < ITERATIONS; i++) {
+        double predicted_easting = const_accel_eq(time_s * i, vel.easting[0], accel.easting[0], pos.easting);
+        double predicted_northing = const_accel_eq(time_s * i, vel.northing[0], accel.northing[0], pos.northing);
+        double predicted_alt = const_accel_eq(time_s * i, vel.altitude[0], accel.altitude[0], alt);
+
+        // Do something with predicted positions
+    }
 
     /* generate random angles to publish for now */
     aiming_output_angles->pan_angle.angle = rand() % 360;
