@@ -16,6 +16,11 @@ static uint16_t calc_timestamp(uint32_t mission_time) {
     return timestamp;
 }
 
+/* Parses the block timestamp to global ms time */
+uint16_t parse_blk_timestamp_ms(uint16_t hdr_timestamp, uint16_t blk_timestamp){
+    return hdr_timestamp * 30 * 1000 + blk_timestamp * 10;
+}
+
 /* Calculate the offset timestamp
  * @param mission_time The absolute mission time in milliseconds
  * @param abs_timestamp The abs time to get the offset from
