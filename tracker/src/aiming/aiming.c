@@ -14,36 +14,44 @@ ORB_DECLARE(sensor_baro);
 ORB_DECLARE(sensor_hinge_angle);
 
 void aim_tracker(aiming_input_telem_t *aiming_input_telem, aiming_output_angles_t *aiming_output_angles, size_t size_aiming_input){
-    /* TODO: figure out aiming algoritm */
     // ASSUME DATA IS NON-ZERO AND WORKING
 
     size_t last_index = size_aiming_input - 1;
 
-    UTMCoord index0_utm = latlon_to_utm(aiming_input_telem[0]->rocket_gnss.latitude, aiming_input_telem[0]->rocket_gnss.longitude);
-    UTMCoord pos = latlon_to_utm(aiming_input_telem[last_index]->rocket_gnss.latitude, aiming_input_telem[last_index]->rocket_gnss.longitude);
     double alt = aiming_input_telem[last_index]->rocket_gnss.altitude;
 
     // Create functions given positions, gives velocity and acceleration!!!
 
-    integrated_pos_t vel = get_avg_vel(aiming_input_telem, size_aiming_input);
-    integrated_pos_t accel = get_avg_accel(aiming_input_telem, size_aiming_input);
+    integrated_avg_pos_t vel = get_avg_vel(aiming_input_telem, size_aiming_input);
+    integrated_avg_pos_t accel = get_avg_accel(aiming_input_telem, size_aiming_input);
 
 
 
+    UTMCoord pos = latlon_to_utm(aiming_input_telem[last_index]->rocket_gnss.latitude, aiming_input_telem[last_index]->rocket_gnss.longitude);
+    UTMCoord tracker_pos = latlon_to_utm(aiming_input_telem[last_index]->tracker_gnss.latitude, aiming_input_telem[last_index]->tracker_gnss.longitude);
 
     float time_s = 1 / ITERATIONS; // One second divided by iterations per second
 
     for (int i =0; i < ITERATIONS; i++) {
-        double predicted_easting = const_accel_eq(time_s * i, vel.easting[0], accel.easting[0], pos.easting);
-        double predicted_northing = const_accel_eq(time_s * i, vel.northing[0], accel.northing[0], pos.northing);
-        double predicted_alt = const_accel_eq(time_s * i, vel.altitude[0], accel.altitude[0], alt);
+        double predicted_easting = const_accel_eq(time_s * i, vel.easting, accel.easting, pos.easting);
+        double predicted_northing = const_accel_eq(time_s * i, vel.northing, accel.northing, pos.northing);
+        double predicted_alt = const_accel_eq(time_s * i, vel.altitude, accel.altitude, alt);
 
-        // Do something with predicted positions
+        pos.easting = predicted_easting;
+        pos.northing = predicted_northing;
+        alt = predicted_alt;
+
+
+        // Change in pos between rocket pos and tracker pos
+        double delta_easting = predicted_easting - tracker_pos.easting;
+        double delta_northing = predicted_northing - tracker_pos.northing;
+        double delta_alt = predicted_alt - aiming_input_telem[last_index]->tracker_gnss.altitude;
+
+        aiming_output_angles->pan_angle.angle = atan2(delta_northing, delta_easting) * (180.0 / M_PI);
+
+        double horizontal_distance = sqrt(delta_easting * delta_easting + delta_northing * delta_northing);
+        aiming_output_angles->tilt_angle.angle = atan2(delta_alt, horizontal_distance) * (180.0 / M_PI);
     }
-
-    /* generate random angles to publish for now */
-    aiming_output_angles->pan_angle.angle = rand() % 360;
-    aiming_output_angles->tilt_angle.angle = rand() % 360;
 }
 
 void* aiming_main(void* args){
