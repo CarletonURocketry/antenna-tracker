@@ -34,11 +34,6 @@ config INSPACE_TRACKER_RADIO_PATH
                 The path identifier of the radio device for receiving.
         depends on INSPACE_TRACKER_RADIO
 
-config INSPACE_TRACKER_RADIO_MOCKING
-        bool "Mock radio telemetry data"
-        default n
-        depends on INSPACE_TRACKER
-
 config INSPACE_TRACKER_TELEMETRY_CALLSIGN
         string "HAM radio callsign"
         default "VA3ZZA"
