@@ -1,11 +1,13 @@
 #include <pthread.h>
 #include "aiming.h"
+// #ifdef CONFIG_UORB
 #include <uORB/uORB.h>
+// #endif
 #include <poll.h>
 #include <string.h>
 #include <time.h>
 #include "../syslogging.h"
-#include "utm/utm.h"
+#include "utm.h"
 #include "kinematics.h"
 
 ORB_DECLARE(sensor_gnss);
@@ -18,7 +20,7 @@ void aim_tracker(aiming_input_telem_t *aiming_input_telem, aiming_output_angles_
 
     size_t last_index = size_aiming_input - 1;
 
-    double alt = aiming_input_telem[last_index]->rocket_gnss.altitude;
+    double alt = aiming_input_telem[last_index].rocket_gnss.altitude;
 
     // Create functions given positions, gives velocity and acceleration!!!
 
@@ -27,8 +29,8 @@ void aim_tracker(aiming_input_telem_t *aiming_input_telem, aiming_output_angles_
 
 
 
-    UTMCoord pos = latlon_to_utm(aiming_input_telem[last_index]->rocket_gnss.latitude, aiming_input_telem[last_index]->rocket_gnss.longitude);
-    UTMCoord tracker_pos = latlon_to_utm(aiming_input_telem[last_index]->tracker_gnss.latitude, aiming_input_telem[last_index]->tracker_gnss.longitude);
+    utm_coord_t pos = latlon_to_utm(aiming_input_telem[last_index].rocket_gnss.latitude, aiming_input_telem[last_index].rocket_gnss.longitude);
+    utm_coord_t tracker_pos = latlon_to_utm(aiming_input_telem[last_index].tracker_gnss.latitude, aiming_input_telem[last_index].tracker_gnss.longitude);
 
     float time_s = 1 / ITERATIONS; // One second divided by iterations per second
 
@@ -45,7 +47,7 @@ void aim_tracker(aiming_input_telem_t *aiming_input_telem, aiming_output_angles_
         // Change in pos between rocket pos and tracker pos
         double delta_easting = predicted_easting - tracker_pos.easting;
         double delta_northing = predicted_northing - tracker_pos.northing;
-        double delta_alt = predicted_alt - aiming_input_telem[last_index]->tracker_gnss.altitude;
+        double delta_alt = predicted_alt - aiming_input_telem[last_index].tracker_gnss.altitude;
 
         aiming_output_angles->pan_angle.angle = atan2(delta_northing, delta_easting) * (180.0 / M_PI);
 
@@ -124,7 +126,8 @@ void* aiming_main(void* args){
 
     for(;;){
         aiming_output_angles_t aiming_output_angles;
-        aim_tracker(&aiming_input_telem, &aiming_output_angles);
+        int arr_size = sizeof(aiming_input_telem) / sizeof(aiming_input_telem_t);
+        aim_tracker(&aiming_input_telem, &aiming_output_angles, arr_size);
 
         orb_publish_multi(uorb_fds_out[PAN_ANGLE].fd, &aiming_output_angles.pan_angle, sizeof(aiming_output_angles.pan_angle));
         orb_publish_multi(uorb_fds_out[TILT_ANGLE].fd, &aiming_output_angles.tilt_angle, sizeof(aiming_output_angles.tilt_angle));

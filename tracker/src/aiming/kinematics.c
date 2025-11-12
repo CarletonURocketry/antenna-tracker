@@ -8,7 +8,7 @@
 // def const_acc_eq(vel, time, acc, orig_pos):
 //     return orig_pos + vel * time + 0.5 * acc * (time ** 2)
 
-float const_accel_eq(double time_s, double vel, double accel, double orig_pos) {
+double const_accel_eq(double time_s, double vel, double accel, double orig_pos) {
     return orig_pos + vel * time_s + 0.5 * accel * (time_s * time_s);
 }
 
@@ -28,8 +28,8 @@ integrated_pos_t pos_to_vels(aiming_input_telem_t *aiming_input_telem, int num_p
 
     // Skip first point cuz we need 2 points to calculate velocity
     for (int i = 1; i < num_points; i++) {
-        UTMCoord pos = latlon_to_utm(aiming_input_telem[i].rocket_gnss.latitude, aiming_input_telem[i].rocket_gnss.longitude);
-        UTMCoord prev_pos = latlon_to_utm(aiming_input_telem[i - 1].rocket_gnss.latitude, aiming_input_telem[i - 1].rocket_gnss.longitude);
+        utm_coord_t pos = latlon_to_utm(aiming_input_telem[i].rocket_gnss.latitude, aiming_input_telem[i].rocket_gnss.longitude);
+        utm_coord_t prev_pos = latlon_to_utm(aiming_input_telem[i - 1].rocket_gnss.latitude, aiming_input_telem[i - 1].rocket_gnss.longitude);
 
         double time_diff = aiming_input_telem[i].rocket_gnss.timestamp - aiming_input_telem[i - 1].rocket_gnss.timestamp;
 

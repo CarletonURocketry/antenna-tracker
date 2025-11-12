@@ -1,8 +1,8 @@
 #include "utm.h"
 #include <math.h>
 
-UTMCoord latlon_to_utm(double lat, double lon) {
-    UTMCoord utm;
+utm_coord_t latlon_to_utm(double lat, double lon) {
+    utm_coord_t utm;
     
     // Calculate zone for central meridian
     int zone = (int)((lon + 180.0) / 6.0) + 1;

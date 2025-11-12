@@ -1,6 +1,5 @@
 #ifndef UTM_H
 #define UTM_H
-#include <stdint.h>
 
 #define _USE_MATH_DEFINES
 #include <math.h>
@@ -18,8 +17,8 @@
 typedef struct {
     double easting;
     double northing;
-} UTMCoord;
+} utm_coord_t;
 
-UTMCoord latlon_to_utm(double lat, double lon);
+utm_coord_t latlon_to_utm(double lat, double lon);
 
 #endif // UTM_H
