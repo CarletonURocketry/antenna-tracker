@@ -1,3 +1,0 @@
-src/syslogging.c:23:5:setup_syslogging	24	static
-src/syslogging.c:37:13:syslog_flush	16	static
-src/syslogging.c:51:6:syslog_tee	32	static
