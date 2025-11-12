@@ -91,7 +91,7 @@ int parse_packet(uint8_t* buffer, ssize_t buff_len, struct pollfd uorb_fds_out[]
                         .altitude = (float)alt_blk->altitude
                     };
 
-                    ininfo("Time: %d - Alt: %d", altitude.timestamp, altitude.altitude);
+                    ininfo("Time: %d - Alt: %d\n", altitude.timestamp, altitude.altitude);
                     orb_publish_multi(uorb_fds_out[ROCKET_ALT].fd, &altitude, sizeof(altitude));
                     break;
                 }
@@ -164,7 +164,7 @@ void* collection_main(void* args){
     }
 
     #ifdef CONFIG_INSPACE_TRACKER_RADIO_MOCK 
-        ininfo("Mocking radio data")
+        ininfo("Mocking radio data\n");
 
         FILE* telem_file = fmemopen(EL_BLASTO_RAW_HEX, sizeof(EL_BLASTO_RAW_HEX), "r");
         if(telem_file == NULL){
@@ -234,11 +234,6 @@ void* collection_main(void* args){
             inerr("Error receiving from radio: %d\n", err);
             goto err_cleanup;
         }
-
-        for (ssize_t i = 0; i < b_read; i++) {
-            printf("%02X ", buffer[i]);
-        }
-        printf("\n");
 
         err = parse_packet(buffer, b_read, uorb_fds_out);
         if(err < 0){

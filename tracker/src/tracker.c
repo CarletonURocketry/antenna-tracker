@@ -12,7 +12,7 @@ int main(void){
     int err;
     err = setup_syslogging();
         if(err != 0){
-            printf("Failed to setup syslogging: %s\n", strerror(err));
+            inerr("Failed to setup syslogging: %s\n", strerror(err));
             return -1;
         }
 
