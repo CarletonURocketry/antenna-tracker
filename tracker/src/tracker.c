@@ -16,14 +16,14 @@ int main(void){
             return -1;
         }
 
-    pthread_t collection_thread;
+    // pthread_t collection_thread;
 
-    ininfo("Starting tracker\n");
-    err = pthread_create(&collection_thread, NULL, collection_main, NULL);
-    if(err != 0){
-        inerr("Failed to create collection thread: %s\n", strerror(err));
-        return -1;
-    }
+    // ininfo("Starting tracker\n");
+    // err = pthread_create(&collection_thread, NULL, collection_main, NULL);
+    // if(err != 0){
+    //     inerr("Failed to create collection thread: %s\n", strerror(err));
+    //     return -1;
+    // }
 
     pthread_t aiming_thread;
     err = pthread_create(&aiming_thread, NULL, aiming_main, NULL);
