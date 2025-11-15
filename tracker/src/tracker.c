@@ -39,7 +39,7 @@ int main(void){
         return -1;
     }
 
-    pthread_join(collection_thread, NULL);
+    // pthread_join(collection_thread, NULL);
     pthread_join(aiming_thread, NULL);
     pthread_join(movement_thread, NULL);
     return 0;
