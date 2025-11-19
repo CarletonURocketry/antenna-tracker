@@ -34,7 +34,7 @@ void aim_tracker(aiming_input_telem_t *aiming_input_telem, aiming_output_angles_
 
     float time_s = 1 / ITERATIONS; // One second divided by iterations per second
 
-    for (int i =0; i < ITERATIONS; i++) {
+    for (int i = 0; i < ITERATIONS; i++) {
         double predicted_easting = const_accel_eq(time_s * i, vel.easting, accel.easting, pos.easting);
         double predicted_northing = const_accel_eq(time_s * i, vel.northing, accel.northing, pos.northing);
         double predicted_alt = const_accel_eq(time_s * i, vel.altitude, accel.altitude, alt);
@@ -145,7 +145,7 @@ void* aiming_main(void* args){
             }
 
             union uorb_sensor_buff_t uorb_sensor_buff;
-            err = orb_copy_multi(uorb_fds_in[i].fd, &uorb_sensor_buff, sizeof(uorb_sensor_buff));
+            err = orb_copy_multi(uorb_fds_in[i].fd, &uorb_sensor_buff, sizeof(uorb_sensor_buff));       
             if(err < 0){
                 inerr("Error copying uORB data: %s\n", strerror(err));
                 continue;
