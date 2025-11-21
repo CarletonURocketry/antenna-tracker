@@ -4,101 +4,73 @@
 #include <stdlib.h>
 #include <assert.h>
 
-// # Constant Acceleration Equation
-// def const_acc_eq(vel, time, acc, orig_pos):
-//     return orig_pos + vel * time + 0.5 * acc * (time ** 2)
 
-double const_accel_eq(double time_s, double vel, double accel, double orig_pos) {
+float const_accel_eq(uint16_t time_ms, float vel, float accel, float orig_pos) {
+    int time_s = time_ms / 1000;
     return orig_pos + vel * time_s + 0.5 * accel * (time_s * time_s);
 }
 
-integrated_pos_t pos_to_vels(aiming_input_telem_t *aiming_input_telem, int num_points) {
-    // Minus 1 cuz we lose a point when calculating velocity
+int pos_to_vels(aiming_input_telem_t *aiming_input_telem, int num_points, integrated_pos_t *velocities) {
+    /* We loose a point from calculating vel */
     int size = num_points - 1;
 
-    double *easting_vel = malloc(size * sizeof(double));
-    double *northing_vel = malloc(size * sizeof(double));
-    double *alt_vel = malloc(size * sizeof(double));
-    double *time_diffs = malloc(size * sizeof(double));
+    float easting_vel[size];
+    float northing_vel[size];
+    float alt_vel[size];
 
-    assert(easting_vel != NULL);
-    assert(northing_vel != NULL);
-    assert(alt_vel != NULL);
-    assert(time_diffs != NULL);
-
-    // Skip first point cuz we need 2 points to calculate velocity
+    /* Skip first point cuz we need 2 points to calculate velocity */
     for (int i = 1; i < num_points; i++) {
         utm_coord_t pos = latlon_to_utm(aiming_input_telem[i].rocket_gnss.latitude, aiming_input_telem[i].rocket_gnss.longitude);
         utm_coord_t prev_pos = latlon_to_utm(aiming_input_telem[i - 1].rocket_gnss.latitude, aiming_input_telem[i - 1].rocket_gnss.longitude);
 
-        double time_diff = aiming_input_telem[i].rocket_gnss.timestamp - aiming_input_telem[i - 1].rocket_gnss.timestamp;
-
-        easting_vel[i - 1] = (pos.easting - prev_pos.easting) / time_diff;
-        northing_vel[i - 1] = (pos.northing - prev_pos.northing) / time_diff;
-        alt_vel[i - 1] = (aiming_input_telem[i].rocket_gnss.altitude - aiming_input_telem[i - 1].rocket_gnss.altitude) / time_diff;
-        time_diffs[i - 1] = time_diff;
+        easting_vel[i - 1] = (pos.easting - prev_pos.easting) / ROCKET_SAMPLE_DT_MS;
+        northing_vel[i - 1] = (pos.northing - prev_pos.northing) / ROCKET_SAMPLE_DT_MS;
+        alt_vel[i - 1] = (aiming_input_telem[i].rocket_gnss.altitude - aiming_input_telem[i - 1].rocket_gnss.altitude) / ROCKET_SAMPLE_DT_MS;
     }
 
-    return (integrated_pos_t) {
-        easting_vel,
-        northing_vel,
-        alt_vel,
-        time_diffs,
-        size
-    };
+
+    velocities->easting = easting_vel;
+    velocities->northing = northing_vel;
+    velocities->altitude = alt_vel;
+    velocities->size = size;
+    
+    return 0;
 }
 
-integrated_pos_t pos_to_accels(aiming_input_telem_t *aiming_input_telem, int num_points) {
-    integrated_pos_t vel_data = pos_to_vels(aiming_input_telem, num_points);
+int pos_to_accels(aiming_input_telem_t *aiming_input_telem, int num_points, integrated_pos_t *accelerations) {
+    integrated_pos_t vel_data;
+    pos_to_vels(aiming_input_telem, num_points, &vel_data);
+
+    /* Minus 2 cuz we lose another point when calculating acceleration (lost 1 from vel) */
     int size = num_points - 2;
 
-    // Minus 2 cuz we lose another point when calculating acceleration
-    double *easting_accel = malloc(size * sizeof(double));
-    double *northing_accel = malloc(size * sizeof(double));
-    double *alt_accel = malloc(size * sizeof(double));
-    double *time_diffs = malloc(size * sizeof(double));
+    float easting_accel[size];
+    float northing_accel[size];
+    float alt_accel[size];
 
-    assert(easting_accel != NULL);
-    assert(northing_accel != NULL);
-    assert(alt_accel != NULL);
-    assert(time_diffs != NULL);
-
-    // Skip first point cuz we need 2 points to calculate acceleration
+    /* Skip first point cuz we need 2 points to calculate acceleration */
     for (int i = 1; i < num_points - 1; i++) {
-        double time_diff = vel_data.time_diffs[i] - vel_data.time_diffs[i - 1];
-
-        easting_accel[i - 1] = (vel_data.easting[i] - vel_data.easting[i - 1]) / time_diff;
-        northing_accel[i - 1] = (vel_data.northing[i] - vel_data.northing[i - 1]) / time_diff;
-        alt_accel[i - 1] = (vel_data.altitude[i] - vel_data.altitude[i - 1]) / time_diff;
-        time_diffs[i - 1] = time_diff;
+        easting_accel[i - 1] = (vel_data.easting[i] - vel_data.easting[i - 1]) / ROCKET_SAMPLE_DT_MS;
+        northing_accel[i - 1] = (vel_data.northing[i] - vel_data.northing[i - 1]) / ROCKET_SAMPLE_DT_MS;
+        alt_accel[i - 1] = (vel_data.altitude[i] - vel_data.altitude[i - 1]) / ROCKET_SAMPLE_DT_MS;
     }
 
-    free(vel_data.easting);
-    free(vel_data.northing);
-    free(vel_data.altitude);
-    free(vel_data.time_diffs);
+    accelerations->easting = easting_accel;
+    accelerations->northing = northing_accel;
+    accelerations->altitude = alt_accel;
+    accelerations->size = size;
 
-    vel_data.easting = NULL;
-    vel_data.northing = NULL;
-    vel_data.altitude = NULL;
-    vel_data.time_diffs = NULL;
-
-
-    return (integrated_pos_t) {
-        easting_accel,
-        northing_accel,
-        alt_accel,
-        time_diffs,
-        size
-    };
+    return 0;
 }
 
 
 integrated_avg_pos_t get_avg_vel(aiming_input_telem_t *aiming_input_telem, int num_points) {
-    integrated_pos_t vel_data = pos_to_vels(aiming_input_telem, num_points);
-    double total_vel_easting = 0.0;
-    double total_vel_northing = 0.0;
-    double total_vel_altitude = 0.0;
+    integrated_pos_t vel_data;
+    pos_to_vels(aiming_input_telem, num_points, &vel_data);
+
+    float total_vel_easting = 0.0;
+    float total_vel_northing = 0.0;
+    float total_vel_altitude = 0.0;
 
     for (int i = 0; i < vel_data.size; i++) {
         total_vel_easting += vel_data.easting[i];
@@ -112,24 +84,16 @@ integrated_avg_pos_t get_avg_vel(aiming_input_telem_t *aiming_input_telem, int n
         total_vel_altitude / vel_data.size,
     };
 
-    free(vel_data.easting);
-    free(vel_data.northing);
-    free(vel_data.altitude);
-    free(vel_data.time_diffs);
-
-    vel_data.easting = NULL;
-    vel_data.northing = NULL;
-    vel_data.altitude = NULL;
-    vel_data.time_diffs = NULL;
-
     return result;
 }
 
 integrated_avg_pos_t get_avg_accel(aiming_input_telem_t *aiming_input_telem, int num_points) {
-    integrated_pos_t accel_data = pos_to_accels(aiming_input_telem, num_points);
-    double total_accel_easting = 0.0;
-    double total_accel_northing = 0.0;
-    double total_accel_altitude = 0.0;
+    integrated_pos_t accel_data;
+    pos_to_accels(aiming_input_telem, num_points, &accel_data);
+
+    float total_accel_easting = 0.0;
+    float total_accel_northing = 0.0;
+    float total_accel_altitude = 0.0;
 
     for (int i = 0; i < accel_data.size; i++) {
         total_accel_easting += accel_data.easting[i];
@@ -142,16 +106,6 @@ integrated_avg_pos_t get_avg_accel(aiming_input_telem_t *aiming_input_telem, int
         total_accel_northing / accel_data.size,
         total_accel_altitude / accel_data.size,
     };
-
-    free(accel_data.easting);
-    free(accel_data.northing);
-    free(accel_data.altitude);
-    free(accel_data.time_diffs);
-
-    accel_data.easting = NULL;
-    accel_data.northing = NULL;
-    accel_data.altitude = NULL;
-    accel_data.time_diffs = NULL;
 
     return result;
 }

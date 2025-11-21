@@ -3,6 +3,8 @@
 #ifndef _INSPACE_TRACKER_AIMING_H_
 #define _INSPACE_TRACKER_AIMING_H_
 
+/* Rocket sample delta time in ms */
+#define ROCKET_SAMPLE_DT_MS 50
 #define ITERATIONS 10
 
 void* aiming_main(void* args);

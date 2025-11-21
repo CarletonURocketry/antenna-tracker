@@ -15,45 +15,35 @@ ORB_DECLARE(sensor_mag);
 ORB_DECLARE(sensor_baro);
 ORB_DECLARE(sensor_hinge_angle);
 
-void aim_tracker(aiming_input_telem_t *aiming_input_telem, aiming_output_angles_t *aiming_output_angles, size_t size_aiming_input){
-    // ASSUME DATA IS NON-ZERO AND WORKING
+void aim_tracker(aiming_input_telem_t *aiming_input_telem, uint16_t time_offset_ms, aiming_output_angles_t *aiming_output_angles, size_t size_aiming_input){
+    /* ASSUME DATA IS NON-ZERO AND WORKING */
 
     size_t last_index = size_aiming_input - 1;
 
-    double alt = aiming_input_telem[last_index].rocket_gnss.altitude;
+    float alt = aiming_input_telem[last_index].rocket_gnss.altitude;
 
     // Create functions given positions, gives velocity and acceleration!!!
 
     integrated_avg_pos_t vel = get_avg_vel(aiming_input_telem, size_aiming_input);
     integrated_avg_pos_t accel = get_avg_accel(aiming_input_telem, size_aiming_input);
 
-
-
     utm_coord_t pos = latlon_to_utm(aiming_input_telem[last_index].rocket_gnss.latitude, aiming_input_telem[last_index].rocket_gnss.longitude);
     utm_coord_t tracker_pos = latlon_to_utm(aiming_input_telem[last_index].tracker_gnss.latitude, aiming_input_telem[last_index].tracker_gnss.longitude);
 
-    float time_s = 1 / ITERATIONS; // One second divided by iterations per second
+    
+    float predicted_easting = const_accel_eq(time_offset_ms, vel.easting, accel.easting, pos.easting);
+    float predicted_northing = const_accel_eq(time_offset_ms, vel.northing, accel.northing, pos.northing);
+    float predicted_alt = const_accel_eq(time_offset_ms, vel.altitude, accel.altitude, alt);
 
-    for (int i = 0; i < ITERATIONS; i++) {
-        double predicted_easting = const_accel_eq(time_s * i, vel.easting, accel.easting, pos.easting);
-        double predicted_northing = const_accel_eq(time_s * i, vel.northing, accel.northing, pos.northing);
-        double predicted_alt = const_accel_eq(time_s * i, vel.altitude, accel.altitude, alt);
+    // Change in pos between rocket pos and tracker pos
+    float delta_easting = predicted_easting - tracker_pos.easting;
+    float delta_northing = predicted_northing - tracker_pos.northing;
+    float delta_alt = predicted_alt - aiming_input_telem[last_index].tracker_gnss.altitude;
 
-        pos.easting = predicted_easting;
-        pos.northing = predicted_northing;
-        alt = predicted_alt;
+    aiming_output_angles->pan_angle.angle = atan2(delta_northing, delta_easting) * (180.0 / M_PI);
 
-
-        // Change in pos between rocket pos and tracker pos
-        double delta_easting = predicted_easting - tracker_pos.easting;
-        double delta_northing = predicted_northing - tracker_pos.northing;
-        double delta_alt = predicted_alt - aiming_input_telem[last_index].tracker_gnss.altitude;
-
-        aiming_output_angles->pan_angle.angle = atan2(delta_northing, delta_easting) * (180.0 / M_PI);
-
-        double horizontal_distance = sqrt(delta_easting * delta_easting + delta_northing * delta_northing);
-        aiming_output_angles->tilt_angle.angle = atan2(delta_alt, horizontal_distance) * (180.0 / M_PI);
-    }
+    float horizontal_distance = sqrt(delta_easting * delta_easting + delta_northing * delta_northing);
+    aiming_output_angles->tilt_angle.angle = atan2(delta_alt, horizontal_distance) * (180.0 / M_PI);
 }
 
 void* aiming_main(void* args){
@@ -127,7 +117,7 @@ void* aiming_main(void* args){
     for(;;){
         aiming_output_angles_t aiming_output_angles;
         int arr_size = sizeof(aiming_input_telem) / sizeof(aiming_input_telem_t);
-        aim_tracker(&aiming_input_telem, &aiming_output_angles, arr_size);
+        aim_tracker(&aiming_input_telem, 50, &aiming_output_angles, arr_size);
 
         orb_publish_multi(uorb_fds_out[PAN_ANGLE].fd, &aiming_output_angles.pan_angle, sizeof(aiming_output_angles.pan_angle));
         orb_publish_multi(uorb_fds_out[TILT_ANGLE].fd, &aiming_output_angles.tilt_angle, sizeof(aiming_output_angles.tilt_angle));

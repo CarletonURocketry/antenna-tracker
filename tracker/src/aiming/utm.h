@@ -15,10 +15,10 @@
 #define UTM_K0 0.9996
 
 typedef struct {
-    double easting;
-    double northing;
+    float easting;
+    float northing;
 } utm_coord_t;
 
-utm_coord_t latlon_to_utm(double lat, double lon);
+utm_coord_t latlon_to_utm(float lat, float lon);
 
 #endif // UTM_H
