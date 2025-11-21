@@ -10,10 +10,14 @@
 void* aiming_main(void* args);
 
 typedef struct {
-    struct sensor_gnss tracker_gnss;
-    struct sensor_mag tracker_mag;
-    struct sensor_baro tracker_baro;
-    struct sensor_gnss rocket_gnss;
+    struct sensor_gnss tracker_gnss[10];
+    int tracker_gnss_n;
+    struct sensor_mag tracker_mag[10];
+    int tracker_mag_n;
+    struct sensor_baro tracker_baro[10];
+    int tracker_baro_n;
+    struct sensor_gnss rocket_gnss[10];
+    int rocket_gnss_n;
 } aiming_input_telem_t;
 
 typedef struct {

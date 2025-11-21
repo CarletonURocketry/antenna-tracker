@@ -56,7 +56,7 @@ void* movement_main(void* args){
     memset(&movement_input_angles, 0, sizeof(movement_input_angles));
 
     for(;;){
-        err = poll(uorb_fds, sizeof(uorb_fds) / sizeof(uorb_fds[0]), 1000);
+        err = poll(uorb_fds, sizeof(uorb_fds) / sizeof(uorb_fds[0]), -1);
         if(err < 0){
             inerr("Error polling uORB data: %s\n", strerror(err));
             continue;

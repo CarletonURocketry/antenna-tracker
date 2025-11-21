@@ -19,6 +19,6 @@ typedef struct {
     float northing;
 } utm_coord_t;
 
-utm_coord_t latlon_to_utm(float lat, float lon);
+int latlon_to_utm(float lat, float lon, utm_coord_t *utm);
 
 #endif // UTM_H
