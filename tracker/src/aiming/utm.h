@@ -15,8 +15,8 @@
 #define UTM_K0 0.9996
 
 typedef struct {
-    float easting;
-    float northing;
+    float x;
+    float y;
 } utm_coord_t;
 
 int latlon_to_utm(float lat, float lon, utm_coord_t *utm);

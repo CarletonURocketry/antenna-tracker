@@ -36,18 +36,18 @@ int latlon_to_utm(float lat, float lon, utm_coord_t *utm) {
                 - (35*e6/3072) * sin(6*lat_rad));
     
     // Calculate UTM easting
-    utm->easting = UTM_K0 * N * (A + (1-T+C)*A*A*A/6
+    utm->x = UTM_K0 * N * (A + (1-T+C)*A*A*A/6
                   + (5-18*T+T*T+72*C-58*WGS84_E2)*A*A*A*A*A/120)
                   + 500000.0; // False easting
     
     // Calculate UTM northing
-    utm->northing = UTM_K0 * (M + N*tan_lat * (A*A/2
+    utm->y = UTM_K0 * (M + N*tan_lat * (A*A/2
                    + (5-T+9*C+4*C*C)*A*A*A*A/24
                    + (61-58*T+T*T+600*C-330*WGS84_E2)*A*A*A*A*A*A/720));
     
     // Add false northing for southern hemisphere
     if (lat < 0) {
-        utm->northing += 10000000.0;
+        utm->y += 10000000.0;
     }
     
     return 0;
