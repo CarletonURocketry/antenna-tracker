@@ -41,8 +41,10 @@ void aim_tracker(aiming_input_telem_t *aiming_input_telem, uint16_t time_offset_
 
     // Convert to spherical coordinates (azimuth and elevation angles)
     aiming_output_angles->pan_angle.angle = atan2(delta_y, delta_x) * (180.0 / M_PI);
-
+    
     float horizontal_distance = sqrt(delta_x * delta_x + delta_y * delta_y);
+
+    /* We are using -90 to 90 degree angles (The datum, aka 0, will be the rocket). In pwm control, remember to add 90 degrees to compensate for this! */
     aiming_output_angles->tilt_angle.angle = atan2(delta_z, horizontal_distance) * (180.0 / M_PI);
 }
 
