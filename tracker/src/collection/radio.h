@@ -1,5 +1,5 @@
-#ifndef _ANTENNA_TRACKER_RADIO_H_
-#define _ANTENNA_TRACKER_RADIO_H_
+#ifndef _INSPACE_TRACKER_RADIO_H_
+#define _INSPACE_TRACKER_RADIO_H_
 
 #include "../packets/packet.h"
 
@@ -20,6 +20,6 @@ typedef struct {
     struct error_blk_t error;
 } parsed_packet;
 
-parsed_packet parse_packet(char* buffer);
+parsed_packet parse_packet(char *buffer);
 
 #endif
