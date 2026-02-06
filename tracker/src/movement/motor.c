@@ -19,6 +19,8 @@ typedef struct pwm_state_s {
 #endif
     uint8_t duties[CONFIG_ANTENNA_TRACKER_PWM_NDUTIES];
     int32_t freq;
+
+    int fd;
 } pwm_state_t;
 
 static pwm_state_t pwm_state;
@@ -30,7 +32,8 @@ int move_angle(int angle, int timer);
 
 /*
  * Sets up pwm_state variable
- * Possibly not needed? We can use the info_s from pwm.h to store everything directly? idk want your thoughts on this
+ * Possibly not needed? We can use the info_s from pwm.h to store everything directly
+ * Based off the pwm example from nuttX
  */
 int pwm_state_setup(void) {
     /* Ugly but it works and I can't think of a better way to config it */
@@ -66,7 +69,22 @@ int pwm_state_setup(void) {
 
     pwm_state.freq = CONFIG_ANTENNA_TRACKER_PWM_FREQUENCY;
 
+#ifdef CONFIG_PWM_MULTICHAN
+    pwm_state.fd = open(pwm_state.devpath, O_RDONLY);
+    if (pwm_state.fd < 0) {
+        inerr("Failed to open PWM device %s: %d\n", pwm_state.devpath, errno);
+        return -1;
+    }
+#else
+    pwm_state.fd = open(pwm_state.devpath[timer], O_RDONLY);
+    if (pwm_state.fd < 0) {
+        inerr("Failed to open PWM device %s: %d\n", pwm_state.devpath[timer], errno);
+        return -1;
+    }
+#endif
+
     pwm_state.initialized = true;
+
     return 0;
 }
 
@@ -88,21 +106,7 @@ int move_angle(int angle, int timer) {
         return -1;
     }
 
-#ifdef CONFIG_PWM_MULTICHAN
-    int fd = open(pwm_state.devpath, O_RDONLY);
-    if (fd < 0) {
-        inerr("Failed to open PWM device %s: %d\n", pwm_state.devpath, errno);
-        return -1;
-    }
-#else
-    int fd = open(pwm_state.devpath[timer], O_RDONLY);
-    if (fd < 0) {
-        inerr("Failed to open PWM device %s: %d\n", pwm_state.devpath[timer], errno);
-        return -1;
-    }
-#endif
-
-    ret = ioctl(fd, PWMIOC_GETCHARACTERISTICS, &pwm_info);
+    ret = ioctl(pwm_state.fd, PWMIOC_GETCHARACTERISTICS, &pwm_info);
     if (ret < 0) {
         return errno;
     }
@@ -130,24 +134,23 @@ int move_angle(int angle, int timer) {
         ininfo("\n");
     }
 #else
-    /* pwm_info.duty is a value between 0 and 65000~ */
+    /* pwm_info.fdduty is a value between 0 and 65000~ */
     pwm_info.duty = pwm_state.duties[timer] ? b16divi(uitoub16(pwm_state.duties[timer]) - 1, 100) : 0;
 #endif
 
-    ret = ioctl(fd, PWMIOC_SETCHARACTERISTICS, (unsigned long)((uintptr_t)&pwm_info));
+    ret = ioctl(pwm_state.fd, PWMIOC_SETCHARACTERISTICS, (unsigned long)((uintptr_t)&pwm_info));
     if (ret < 0) {
         inerr("ioctl(PWMIOC_SETCHARACTERISTICS) failed: %d\n", errno);
-        close(fd);
+        close(pwm_state.fd);
         return -1;
     }
 
-    ret = ioctl(fd, PWMIOC_START, 0);
+    ret = ioctl(pwm_state.fd, PWMIOC_START, 0);
     if (ret < 0) {
         inerr("ioctl(PWMIOC_START) failed: %d\n", errno);
-        close(fd);
+        close(pwm_state.fd);
         return -1;
     }
 
-    close(fd);
     return 0;
 }
