@@ -82,9 +82,7 @@ int pwm_state_setup(void) {
         return -1;
     }
 #endif
-
     pwm_state.initialized = true;
-
     return 0;
 }
 
@@ -110,8 +108,6 @@ int move_angle(int angle, int timer) {
     if (ret < 0) {
         return errno;
     }
-    ininfo("Current PWM frequency: %d\n", pwm_info.frequency);
-    ininfo("Test\n");
 
     /* Need to calculate the duty cycle needed to move to specific angle */
     int duty_cycle =
@@ -119,9 +115,6 @@ int move_angle(int angle, int timer) {
                  (long)CONFIG_ANTENNA_TRACKER_MIN_DUTY_CYCLE, (long)CONFIG_ANTENNA_TRACKER_MAX_DUTY_CYCLE);
     /* Update the duty cycle in pwm_state */
     pwm_state.duties[timer] = duty_cycle;
-
-    ininfo("Moving motor to angle %d with duty cycle %d\n", angle, duty_cycle);
-
     pwm_info.frequency = pwm_state.freq;
 
 #ifdef CONFIG_PWM_MULTICHAN
@@ -129,9 +122,6 @@ int move_angle(int angle, int timer) {
         pwm_info.channels[i].channel = pwm_state.channels[i];
         /* pwm_info.channels[i].duty is a value between 0 and 65000~ */
         pwm_info.channels[i].duty = pwm_state.duties[i] ? b16divi(uitoub16(pwm_state.duties[i]) - 1, 100) : 0;
-        ininfo("Setting up channel %d with duty %d\n", pwm_info.channels[i].channel, pwm_info.channels[i].duty);
-        ininfo("channel: %d duty: %08" PRIx32, pwm_info.channels[i].channel, pwm_info.channels[i].duty);
-        ininfo("\n");
     }
 #else
     /* pwm_info.fdduty is a value between 0 and 65000~ */

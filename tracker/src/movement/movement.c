@@ -45,6 +45,7 @@ void *movement_main(void *args) {
         inerr("Failed to set up PWM state\n");
         pthread_exit(NULL);
     }
+    ininfo("pwm_state_setup complete\n");
 
     uorb_fds[TILT_ANGLE].fd = orb_subscribe_multi(uorb_metas[TILT_ANGLE], 0);
     uorb_fds[PAN_ANGLE].fd = orb_subscribe_multi(uorb_metas[PAN_ANGLE], 1);
