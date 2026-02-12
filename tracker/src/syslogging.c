@@ -1,15 +1,15 @@
+#include <errno.h>
 #include <stdarg.h>
 #include <stdatomic.h>
 #include <stdio.h>
-#include <errno.h>
 
 #ifdef DESKTOP_BUILD
 #include <unistd.h>
 #define atomic_set(ptr, val) atomic_store(ptr, val)
 #endif
 
-#include "tracker.h"
 #include "syslogging.h"
+#include "tracker.h"
 
 #define SYSLOG_SYNC_FREQ 8
 
@@ -22,9 +22,9 @@ atomic_int syslog_count;
  */
 int setup_syslogging(void) {
     atomic_set(&syslog_count, 0);
-    #ifdef CONFIG_ANTENNA_TRACKER_SYSLOG_PATH
-    __syslogging_file = fopen(CONFIG_ANTENNA_TRACKER_SYSLOG_PATH, "a");
-    #endif
+#ifdef CONFIG_INSPACE_TRACKER_SYSLOG_PATH
+    __syslogging_file = fopen(CONFIG_INSPACE_TRACKER_SYSLOG_PATH, "a");
+#endif
     if (__syslogging_file == NULL) {
         return errno;
     }

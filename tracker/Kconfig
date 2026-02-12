@@ -1,162 +1,160 @@
-config ANTENNA_TRACKER
+config INSPACE_TRACKER
         tristate "Antenna Tracker"
         default y
         ---help---
                 Enable the Antenna Tracking app
 
-config ANTENNA_TRACKER_PROGNAME
+config INSPACE_TRACKER_PROGNAME
         string "Program name"
         default "tracker"
-        depends on ANTENNA_TRACKER
+        depends on INSPACE_TRACKER
         ---help---
                 This is the name of the program that will be used when the NSH ELF
                 program is installed.
 
-config ANTENNA_TRACKER_PRIORITY
+config INSPACE_TRACKER_PRIORITY
         int "Antenna tracker task priority"
         default 100
-        depends on ANTENNA_TRACKER
+        depends on INSPACE_TRACKER
 
-config ANTENNA_TRACKER_STACKSIZE
+config INSPACE_TRACKER_STACKSIZE
         int "Antenna tracker stack size"
         default DEFAULT_TASK_STACKSIZE
-        depends on ANTENNA_TRACKER
+        depends on INSPACE_TRACKER
 
-config ANTENNA_TRACKER_TELEMETRY_CALLSIGN
+config INSPACE_TRACKER_TELEMETRY_CALLSIGN
         string "Telemetry callsign"
         default "VA3ZZA"
-        depends on ANTENNA_TRACKER
+        depends on INSPACE_TRACKER
 
-
-config ANTENNA_TRACKER_SYSLOG_INFO
+config INSPACE_TRACKER_SYSLOG_INFO
         bool "Enable syslog info output"
         default y
-        depends on ANTENNA_TRACKER
+        depends on INSPACE_TRACKER
 
-config ANTENNA_TRACKER_SYSLOG_DEBUG
+config INSPACE_TRACKER_SYSLOG_DEBUG
         bool "Enable syslog debug output"
         default n
-        depends on ANTENNA_TRACKER
+        depends on INSPACE_TRACKER
 
-config ANTENNA_TRACKER_SYSLOG_ERR
+config INSPACE_TRACKER_SYSLOG_ERR
         bool "Enable syslog error output"
         default y
-        depends on ANTENNA_TRACKER
+        depends on INSPACE_TRACKER
 
-config ANTENNA_TRACKER_SYSLOG_WARN
+config INSPACE_TRACKER_SYSLOG_WARN
         bool "Enable syslog warning output"
         default y
-        depends on ANTENNA_TRACKER
+        depends on INSPACE_TRACKER
 
-
-config ANTENNA_TRACKER_PWM_FREQUENCY
+config INSPACE_TRACKER_PWM_FREQUENCY
         int "PWM Frequency"
         default 400
-        depends on ANTENNA_TRACKER
+        depends on INSPACE_TRACKER
         ---help---
                 Specify the PWM frequency in Hertz for antenna tracker control.
-config ANTENNA_TRACKER_PWM_NCHANNELS
+config INSPACE_TRACKER_PWM_NCHANNELS
         int "Number of PWM channels"
         default 1
         depends on PWM_MULTICHAN
         ---help---
                 Specify the number of PWM channels to be used for multi-channel
                 configuration.
-config ANTENNA_TRACKER_PWM_NTIMERS
+config INSPACE_TRACKER_PWM_NTIMERS
         int "Number of PWM timers"
         default 1
         depends on !PWM_MULTICHAN
         ---help---
                 Specify the number of PWM timers to be used for single-channel
                 configuration.
-config ANTENNA_TRACKER_PWM_NDUTIES
+config INSPACE_TRACKER_PWM_NDUTIES
         int "Number of PWM duties"
         default 2
-        depends on ANTENNA_TRACKER
+        depends on INSPACE_TRACKER
         ---help---
                 Specify the number of PWM duties to be used for antenna tracker
                 control.
-config ANTENNA_TRACKER_PWM_DUTY1
+config INSPACE_TRACKER_PWM_DUTY1
         int "PWM Duty Cycle 1"
         default 50
-        depends on ANTENNA_TRACKER
+        depends on INSPACE_TRACKER
         ---help---
                 Specify the default first PWM duty cycle percentage for antenna tracker
                 control.
-config ANTENNA_TRACKER_PWM_DUTY2
+config INSPACE_TRACKER_PWM_DUTY2
         int "PWM Duty Cycle 2"
         default 50
-        depends on ANTENNA_TRACKER_PWM_NDUTIES >= 2
+        depends on INSPACE_TRACKER_PWM_NDUTIES >= 2
         ---help---
                 Specify the default second PWM duty cycle percentage for antenna tracker
                 control.
-config ANTENNA_TRACKER_PWM_DUTY3
+config INSPACE_TRACKER_PWM_DUTY3
         int "PWM Duty Cycle 3"
         default 50
-        depends on ANTENNA_TRACKER_PWM_NDUTIES >= 3
+        depends on INSPACE_TRACKER_PWM_NDUTIES >= 3
         ---help---
                 Specify the default third PWM duty cycle percentage for antenna tracker
                 control.
-config ANTENNA_TRACKER_PWM_CHANNEL1
+config INSPACE_TRACKER_PWM_CHANNEL1
         int "PWM Channel 1"
         default 1
-        depends on ANTENNA_TRACKER_PWM_NCHANNELS >= 1
+        depends on INSPACE_TRACKER_PWM_NCHANNELS >= 1
         ---help---
                 Specify the PWM channel number for the first channel.
-config ANTENNA_TRACKER_PWM_CHANNEL2
+config INSPACE_TRACKER_PWM_CHANNEL2
         int "PWM Channel 2"
         default 2
-        depends on ANTENNA_TRACKER_PWM_NCHANNELS >= 2
+        depends on INSPACE_TRACKER_PWM_NCHANNELS >= 2
         ---help---
                 Specify the PWM channel number for the second channel.
-config ANTENNA_TRACKER_PWM_CHANNEL3
+config INSPACE_TRACKER_PWM_CHANNEL3
         int "PWM Channel 3"
         default 3
-        depends on ANTENNA_TRACKER_PWM_NCHANNELS >= 3
+        depends on INSPACE_TRACKER_PWM_NCHANNELS >= 3
         ---help---
                 Specify the PWM channel number for the third channel.
-config ANTENNA_TRACKER_PWM_PATH1
+config INSPACE_TRACKER_PWM_PATH1
         string "PWM Device Path 1"
         default "/dev/pwm0"
-        depends on ANTENNNA_TRACKER_PWM_NTIMERS >= 1 
+        depends on INSPACE_TRACKER_PWM_NTIMERS >= 1 
         ---help---
                 Specify the device path for the first PWM timer or channel.
-config ANTENNA_TRACKER_PWM_PATH2
+config INSPACE_TRACKER_PWM_PATH2
         string "PWM Device Path 2"
         default "/dev/pwm1"
-        depends on ANTENNA_TRACKER_PWM_NTIMERS >= 2
+        depends on INSPACE_TRACKER_PWM_NTIMERS >= 2
         ---help---
                 Specify the device path for the second PWM timer or channel.
-config ANTENNA_TRACKER_PWM_PATH3
+config INSPACE_TRACKER_PWM_PATH3
         string "PWM Device Path 3"
         default "/dev/pwm2"
-        depends on ANTENNA_TRACKER_PWM_NTIMERS >= 3
+        depends on INSPACE_TRACKER_PWM_NTIMERS >= 3
         ---help---
                 Specify the device path for the third PWM timer or channel.
-config ANTENNA_TRACKER_MIN_ANGLE
+config INSPACE_TRACKER_MIN_ANGLE
         int "Minimum angle for antenna movement"
         default 0
-        depends on ANTENNA_TRACKER
+        depends on INSPACE_TRACKER
         ---help---
                 Specify the minimum angle (in degrees) for antenna movement.
-config ANTENNA_TRACKER_MAX_ANGLE
+config INSPACE_TRACKER_MAX_ANGLE
         int "Maximum angle for antenna movement"
         default 270
-        depends on ANTENNA_TRACKER
+        depends on INSPACE_TRACKER
         ---help---
                 Specify the maximum angle (in degrees) for antenna movement.
-config ANTENNA_TRACKER_MIN_DUTY_CYCLE
+config INSPACE_TRACKER_MIN_DUTY_CYCLE
         int "Minimum PWM duty cycle"
         default 16
-        depends on ANTENNA_TRACKER
+        depends on INSPACE_TRACKER
         ---help---
                 Specify the minimum PWM duty cycle percentage corresponding to the
                 minimum angle.
-config ANTENNA_TRACKER_MAX_DUTY_CYCLE
+config INSPACE_TRACKER_MAX_DUTY_CYCLE
         int "Maximum PWM duty cycle"
         default 80
-        depends on ANTENNA_TRACKER
+        depends on INSPACE_TRACKER
         ---help---
                 Specify the maximum PWM duty cycle percentage corresponding to the
-
-                
+                maximum angle. 
+        depends on INSPACE_TRACKER
