@@ -46,3 +46,115 @@ config INSPACE_TRACKER_SYSLOG_WARN
         bool "Enable syslog warning output"
         default y
         depends on INSPACE_TRACKER
+
+config INSPACE_TRACKER_PWM_FREQUENCY
+        int "PWM Frequency"
+        default 400
+        depends on INSPACE_TRACKER
+        ---help---
+                Specify the PWM frequency in Hertz for antenna tracker control.
+config INSPACE_TRACKER_PWM_NCHANNELS
+        int "Number of PWM channels"
+        default 1
+        depends on PWM_MULTICHAN
+        ---help---
+                Specify the number of PWM channels to be used for multi-channel
+                configuration.
+config INSPACE_TRACKER_PWM_NTIMERS
+        int "Number of PWM timers"
+        default 1
+        depends on !PWM_MULTICHAN
+        ---help---
+                Specify the number of PWM timers to be used for single-channel
+                configuration.
+config INSPACE_TRACKER_PWM_NDUTIES
+        int "Number of PWM duties"
+        default 2
+        depends on INSPACE_TRACKER
+        ---help---
+                Specify the number of PWM duties to be used for antenna tracker
+                control.
+config INSPACE_TRACKER_PWM_DUTY1
+        int "PWM Duty Cycle 1"
+        default 50
+        depends on INSPACE_TRACKER
+        ---help---
+                Specify the default first PWM duty cycle percentage for antenna tracker
+                control.
+config INSPACE_TRACKER_PWM_DUTY2
+        int "PWM Duty Cycle 2"
+        default 50
+        depends on INSPACE_TRACKER_PWM_NDUTIES >= 2
+        ---help---
+                Specify the default second PWM duty cycle percentage for antenna tracker
+                control.
+config INSPACE_TRACKER_PWM_DUTY3
+        int "PWM Duty Cycle 3"
+        default 50
+        depends on INSPACE_TRACKER_PWM_NDUTIES >= 3
+        ---help---
+                Specify the default third PWM duty cycle percentage for antenna tracker
+                control.
+config INSPACE_TRACKER_PWM_CHANNEL1
+        int "PWM Channel 1"
+        default 1
+        depends on INSPACE_TRACKER_PWM_NCHANNELS >= 1
+        ---help---
+                Specify the PWM channel number for the first channel.
+config INSPACE_TRACKER_PWM_CHANNEL2
+        int "PWM Channel 2"
+        default 2
+        depends on INSPACE_TRACKER_PWM_NCHANNELS >= 2
+        ---help---
+                Specify the PWM channel number for the second channel.
+config INSPACE_TRACKER_PWM_CHANNEL3
+        int "PWM Channel 3"
+        default 3
+        depends on INSPACE_TRACKER_PWM_NCHANNELS >= 3
+        ---help---
+                Specify the PWM channel number for the third channel.
+config INSPACE_TRACKER_PWM_PATH1
+        string "PWM Device Path 1"
+        default "/dev/pwm0"
+        depends on INSPACE_TRACKER_PWM_NTIMERS >= 1 
+        ---help---
+                Specify the device path for the first PWM timer or channel.
+config INSPACE_TRACKER_PWM_PATH2
+        string "PWM Device Path 2"
+        default "/dev/pwm1"
+        depends on INSPACE_TRACKER_PWM_NTIMERS >= 2
+        ---help---
+                Specify the device path for the second PWM timer or channel.
+config INSPACE_TRACKER_PWM_PATH3
+        string "PWM Device Path 3"
+        default "/dev/pwm2"
+        depends on INSPACE_TRACKER_PWM_NTIMERS >= 3
+        ---help---
+                Specify the device path for the third PWM timer or channel.
+config INSPACE_TRACKER_MIN_ANGLE
+        int "Minimum angle for antenna movement"
+        default 0
+        depends on INSPACE_TRACKER
+        ---help---
+                Specify the minimum angle (in degrees) for antenna movement.
+config INSPACE_TRACKER_MAX_ANGLE
+        int "Maximum angle for antenna movement"
+        default 270
+        depends on INSPACE_TRACKER
+        ---help---
+                Specify the maximum angle (in degrees) for antenna movement.
+config INSPACE_TRACKER_MIN_DUTY_CYCLE
+        int "Minimum PWM duty cycle"
+        default 16
+        depends on INSPACE_TRACKER
+        ---help---
+                Specify the minimum PWM duty cycle percentage corresponding to the
+                minimum angle.
+config INSPACE_TRACKER_MAX_DUTY_CYCLE
+        int "Maximum PWM duty cycle"
+        default 80
+        depends on INSPACE_TRACKER
+        ---help---
+                Specify the maximum PWM duty cycle percentage corresponding to the
+                maximum angle. 
+        depends on INSPACE_TRACKER
