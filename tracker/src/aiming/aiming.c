@@ -5,6 +5,7 @@
 #include <string.h>
 #include <time.h>
 #include "../syslogging.h"
+#include <math.h>
 
 typedef struct {
     struct sensor_gnss tracker_gnss;
