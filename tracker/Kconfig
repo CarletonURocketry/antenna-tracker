@@ -47,6 +47,34 @@ config INSPACE_TRACKER_SYSLOG_WARN
         default y
         depends on INSPACE_TRACKER
 
+config INSPACE_MAG_CALIB_X
+        int "Magnetometer X-axis calibration offset"
+        default 0
+        depends on INSPACE_TRACKER
+        ---help---
+                Calibration offset for magnetometer X-axis.
+
+config INSPACE_MAG_CALIB_Y
+        int "Magnetometer Y-axis calibration offset"
+        default 0
+        depends on INSPACE_TRACKER
+        ---help---
+                Calibration offset for magnetometer Y-axis.
+
+config INSPACE_MAG_CALIB_Z
+        int "Magnetometer Z-axis calibration offset"
+        default 0
+        depends on INSPACE_TRACKER
+        ---help---
+                Calibration offset for magnetometer Z-axis.
+
+config INSPACE_MAG_DECLINATION
+        int "Magnetic declination (degrees)"
+        default 0
+        depends on INSPACE_TRACKER
+        ---help---
+                Magnetic declination in degrees for heading correction.
+
 config INSPACE_TRACKER_PWM_FREQUENCY
         int "PWM Frequency"
         default 400
