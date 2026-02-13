@@ -42,12 +42,91 @@ ORB_DECLARE(sensor_mag);
 ORB_DECLARE(sensor_baro);
 ORB_DECLARE(sensor_hinge_angle);
 
-void aim_tracker(aiming_input_telem_t *aiming_input_telem, aiming_output_angles_t *aiming_output_angles){
-    /* TODO: figure out aiming algoritm */
+int mag_to_heading(struct sensor_mag *sensor_mag, float *heading)
+{
+    if (sensor_mag == NULL || heading == NULL) {
+        inerr("Invalid sensor_mag or heading pointer\n");
+        return -1;
+    }
 
-    /* generate random angles to publish for now */
-    aiming_output_angles->pan_angle.angle = rand() % 360;
-    aiming_output_angles->tilt_angle.angle = rand() % 360;
+    float x_cal = sensor_mag->x - CONFIG_INSPACE_MAG_CALIB_X;
+    float y_cal = sensor_mag->y - CONFIG_INSPACE_MAG_CALIB_Y;
+
+    float heading_rad = atan2f(x_cal, y_cal);
+    float heading_deg = heading_rad * 180.0f / M_PI;
+
+    heading_deg += CONFIG_INSPACE_MAG_DECLINATION;
+
+    while (heading_deg < 0.0f) {
+        heading_deg += 360.0f;
+    }
+    while (heading_deg >= 360.0f) {
+        heading_deg -= 360.0f;
+    }
+
+    *heading = heading_deg;
+    return 0;
+}
+
+void aim_tracker(aiming_input_telem_t *aiming_input_telem, aiming_output_angles_t *aiming_output_angles){
+    if (aiming_input_telem == NULL || aiming_output_angles == NULL) {
+        inerr("Invalid input/output pointers in aim_tracker\n");
+        aiming_output_angles->pan_angle.angle = 0.0f;
+        aiming_output_angles->tilt_angle.angle = 0.0f;
+        return;
+    }
+
+    float current_heading;
+    int ret = mag_to_heading(&aiming_input_telem->tracker_mag, &current_heading);
+    if (ret != 0) {
+        inerr("Failed to compute heading from magnetometer\n");
+        aiming_output_angles->pan_angle.angle = 0.0f;
+        aiming_output_angles->tilt_angle.angle = 0.0f;
+        return;
+    }
+
+    const float METERS_PER_DEG_LAT = 111320.0f;
+    const float METERS_PER_DEG_LON_AT_EQUATOR = 111320.0f;
+
+    float lat_avg = (aiming_input_telem->tracker_gnss.latitude + aiming_input_telem->rocket_gnss.latitude) / 2.0f;
+    float meters_per_deg_lon = METERS_PER_DEG_LON_AT_EQUATOR * cosf(lat_avg * M_PI / 180.0f);
+
+    float enu_e = (aiming_input_telem->rocket_gnss.longitude - aiming_input_telem->tracker_gnss.longitude) * meters_per_deg_lon;
+    float enu_n = (aiming_input_telem->rocket_gnss.latitude - aiming_input_telem->tracker_gnss.latitude) * METERS_PER_DEG_LAT;
+    float enu_u = aiming_input_telem->rocket_gnss.altitude - aiming_input_telem->tracker_gnss.altitude;
+
+    float az_rad = atan2f(enu_e, enu_n);
+    float az_deg = az_rad * 180.0f / M_PI;
+    
+    while (az_deg < 0.0f) {
+        az_deg += 360.0f;
+    }
+    while (az_deg >= 360.0f) {
+        az_deg -= 360.0f;
+    }
+
+    float horiz_dist = sqrtf(enu_e*enu_e + enu_n*enu_n);
+    float elevation;
+    if (horiz_dist < 1e-6f) {
+        elevation = (enu_u >= 0.0f) ? 90.0f : -90.0f;
+    } else {
+        float el_rad = atanf(enu_u / horiz_dist);
+        elevation = el_rad * 180.0f / M_PI;
+    }
+
+    float pan_error = az_deg - current_heading;
+    while (pan_error > 180.0f) {
+        pan_error -= 360.0f;
+    }
+    while (pan_error <= -180.0f) {
+        pan_error += 360.0f;
+    }
+
+    aiming_output_angles->pan_angle.angle = pan_error;
+    aiming_output_angles->tilt_angle.angle = elevation;
+
+    ininfo("Aiming: current_hdg=%.1f°, desired_az=%.1f°, pan_err=%.1f°, el=%.1f°\n",
+           current_heading, az_deg, pan_error, elevation);
 }
 
 void* aiming_main(void* args){
