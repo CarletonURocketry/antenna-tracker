@@ -116,7 +116,6 @@ config INSPACE_TRACKER_PWM_CHANNEL3
 config INSPACE_TRACKER_PWM_PATH1
         string "PWM Device Path 1"
         default "/dev/pwm0"
-        depends on INSPACE_TRACKER_PWM_NTIMERS >= 1 
         ---help---
                 Specify the device path for the first PWM timer or channel.
 config INSPACE_TRACKER_PWM_PATH2
