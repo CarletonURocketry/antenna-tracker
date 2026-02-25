@@ -1,8 +1,8 @@
-#include <string.h>
 #include "../tracker.h"
+#include <string.h>
 
-#include "packet.h"
 #include "../syslogging.h"
+#include "packet.h"
 
 /* Get the absolute timestamp that should be used for a packet created
  * at the given mission time
@@ -59,12 +59,12 @@ static int16_t *block_timestamp(uint8_t *block_body) { return (int16_t *)(block_
  */
 void pkt_hdr_init(pkt_hdr_t *p, uint8_t packet_number, uint32_t mission_time) {
     // Don't include the null-terminator
-    int callsign_length = sizeof(CONFIG_ANTENNA_TRACKER_TELEMETRY_CALLSIGN) - 1;
-    if (sizeof(CONFIG_ANTENNA_TRACKER_TELEMETRY_CALLSIGN) - 1 < sizeof(p->call_sign)) {
-        memcpy(&p->call_sign, CONFIG_ANTENNA_TRACKER_TELEMETRY_CALLSIGN, callsign_length);
+    int callsign_length = sizeof(CONFIG_INSPACE_TRACKER_TELEMETRY_CALLSIGN) - 1;
+    if (sizeof(CONFIG_INSPACE_TRACKER_TELEMETRY_CALLSIGN) - 1 < sizeof(p->call_sign)) {
+        memcpy(&p->call_sign, CONFIG_INSPACE_TRACKER_TELEMETRY_CALLSIGN, callsign_length);
         memset(&p->call_sign[callsign_length], '0', sizeof(p->call_sign) - callsign_length);
     } else {
-        memcpy(&p->call_sign, CONFIG_ANTENNA_TRACKER_TELEMETRY_CALLSIGN, sizeof(p->call_sign));
+        memcpy(&p->call_sign, CONFIG_INSPACE_TRACKER_TELEMETRY_CALLSIGN, sizeof(p->call_sign));
     }
 
     p->packet_num = packet_number;
@@ -270,24 +270,10 @@ void error_blk_init(struct error_blk_t *b, const uint8_t proc_id, const uint8_t 
     b->error_code = error_code;
 }
 
-
-
 // void get_next_packet(uint8_t *pkt){
-
-
-
-
-
 
 //     packet_node_t *next_packet = packet_buffer_get_full(buffer);
 //     ((pkt_hdr_t *)next_packet->packet)->packet_num = seq_num++;
 //     transmit(radio, next_packet->packet, next_packet->end - next_packet->packet);
 
-
-
-
 // }
-
-
-
-
