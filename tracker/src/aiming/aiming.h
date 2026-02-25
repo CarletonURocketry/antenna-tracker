@@ -9,7 +9,7 @@
 
 #define TELEM_SAMPLE_N 10
 
-void* aiming_main(void* args);
+void *aiming_main(void *args);
 
 /* UORB declarations for fused sensor data */
 ORB_DECLARE(sensor_alt);
@@ -53,19 +53,9 @@ union uorb_sensor_buff_t {
     struct sensor_baro rocket_baro; /* This is temporary for fakesensor */
 };
 
-enum uorb_sensors_in {
-    TRACKER_GNSS,
-    TRACKER_MAG,
-    TRACKER_BARO,
-    ROCKET_GNSS,
-    ROCKET_ALT,
-    ROCKET_BARO
-};
+enum uorb_sensors_in { TRACKER_GNSS, TRACKER_MAG, TRACKER_BARO, ROCKET_GNSS, ROCKET_ALT, ROCKET_BARO };
 
-enum uorb_sensors_out {
-    TILT_ANGLE,
-    PAN_ANGLE
-};
+enum uorb_sensors_out { TILT_ANGLE, PAN_ANGLE };
 
 int calculate_altitude(struct sensor_baro *baro_data, struct sensor_alt *altitude);
 
