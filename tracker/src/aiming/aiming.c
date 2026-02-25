@@ -1,38 +1,22 @@
 #include "aiming.h"
+#include "fusion.c"
+#include <pthread.h>
+// #ifdef CONFIG_UORB
+#include <uORB/uORB.h>
+// #endif
 #include "../syslogging.h"
+#include "kinematics.h"
+#include "utm.h"
 #include <math.h>
 #include <poll.h>
 #include <pthread.h>
 #include <string.h>
 #include <time.h>
-#include <uORB/uORB.h>
-
-typedef struct {
-    struct sensor_gnss tracker_gnss;
-    struct sensor_mag tracker_mag;
-    struct sensor_baro tracker_baro;
-    struct sensor_gnss rocket_gnss;
-} aiming_input_telem_t;
-
-typedef struct {
-    struct sensor_angle pan_angle;
-    struct sensor_angle tilt_angle;
-} aiming_output_angles_t;
-
-union uorb_sensor_buff_t {
-    struct sensor_gnss tracker_gnss;
-    struct sensor_mag tracker_mag;
-    struct sensor_baro tracker_baro;
-    struct sensor_gnss rocket_gnss;
-};
-
-enum { TRACKER_GNSS, TRACKER_MAG, TRACKER_BARO, ROCKET_GNSS };
-
-enum { TILT_ANGLE, PAN_ANGLE };
 
 ORB_DECLARE(sensor_gnss);
 ORB_DECLARE(sensor_mag);
 ORB_DECLARE(sensor_baro);
+ORB_DECLARE(sensor_alt);
 ORB_DECLARE(sensor_hinge_angle);
 
 int mag_to_heading(struct sensor_mag *sensor_mag, float *heading) {
@@ -60,67 +44,38 @@ int mag_to_heading(struct sensor_mag *sensor_mag, float *heading) {
     return 0;
 }
 
-void aim_tracker(aiming_input_telem_t *aiming_input_telem, aiming_output_angles_t *aiming_output_angles) {
-    if (aiming_input_telem == NULL || aiming_output_angles == NULL) {
-        inerr("Invalid input/output pointers in aim_tracker\n");
-        aiming_output_angles->pan_angle.angle = 0.0f;
-        aiming_output_angles->tilt_angle.angle = 0.0f;
-        return;
-    }
+void aim_tracker(aiming_input_telem_t *aiming_input_telem, uint16_t time_offset_ms,
+                 aiming_output_angles_t *aiming_output_angles) {
+    float last_rocket_alt = aiming_input_telem->rocket_alt[aiming_input_telem->rocket_alt_n - 1].altitude;
 
-    float current_heading;
-    int ret = mag_to_heading(&aiming_input_telem->tracker_mag, &current_heading);
-    if (ret != 0) {
-        inerr("Failed to compute heading from magnetometer\n");
-        aiming_output_angles->pan_angle.angle = 0.0f;
-        aiming_output_angles->tilt_angle.angle = 0.0f;
-        return;
-    }
+    pos_vec_t avg_vel = {0, 0, 0};
+    pos_vec_t avg_accel = {0, 0, 0};
+    utm_coord_t last_rocket_pos;
 
-    const float METERS_PER_DEG_LAT = 111320.0f;
-    const float METERS_PER_DEG_LON_AT_EQUATOR = 111320.0f;
+    latlon_to_utm(aiming_input_telem->rocket_gnss[aiming_input_telem->rocket_gnss_n - 1].latitude,
+                  aiming_input_telem->rocket_gnss[aiming_input_telem->rocket_gnss_n - 1].longitude, &last_rocket_pos);
 
-    float lat_avg = (aiming_input_telem->tracker_gnss.latitude + aiming_input_telem->rocket_gnss.latitude) / 2.0f;
-    float meters_per_deg_lon = METERS_PER_DEG_LON_AT_EQUATOR * cosf(lat_avg * M_PI / 180.0f);
+    utm_coord_t last_tracker_pos;
+    latlon_to_utm(aiming_input_telem->tracker_gnss.latitude, aiming_input_telem->tracker_gnss.longitude,
+                  &last_tracker_pos);
 
-    float enu_e =
-        (aiming_input_telem->rocket_gnss.longitude - aiming_input_telem->tracker_gnss.longitude) * meters_per_deg_lon;
-    float enu_n =
-        (aiming_input_telem->rocket_gnss.latitude - aiming_input_telem->tracker_gnss.latitude) * METERS_PER_DEG_LAT;
-    float enu_u = aiming_input_telem->rocket_gnss.altitude - aiming_input_telem->tracker_gnss.altitude;
+    float predicted_x = const_accel_eq(time_offset_ms, avg_vel.x, avg_accel.x, last_rocket_pos.x);
+    float predicted_y = const_accel_eq(time_offset_ms, avg_vel.y, avg_accel.y, last_rocket_pos.y);
+    float predicted_z = const_accel_eq(time_offset_ms, avg_vel.z, avg_accel.z, last_rocket_alt);
 
-    float az_rad = atan2f(enu_e, enu_n);
-    float az_deg = az_rad * 180.0f / M_PI;
+    // Change in pos between rocket pos and tracker pos
+    float delta_x = predicted_x - last_tracker_pos.x;
+    float delta_y = predicted_y - last_tracker_pos.y;
+    float delta_z = predicted_z - aiming_input_telem->tracker_alt.altitude;
 
-    while (az_deg < 0.0f) {
-        az_deg += 360.0f;
-    }
-    while (az_deg >= 360.0f) {
-        az_deg -= 360.0f;
-    }
+    // Convert to spherical coordinates (azimuth and elevation angles)
+    aiming_output_angles->pan_angle.angle = atan2(delta_y, delta_x) * (180.0 / M_PI);
 
-    float horiz_dist = sqrtf(enu_e * enu_e + enu_n * enu_n);
-    float elevation;
-    if (horiz_dist < 1e-6f) {
-        elevation = (enu_u >= 0.0f) ? 90.0f : -90.0f;
-    } else {
-        float el_rad = atanf(enu_u / horiz_dist);
-        elevation = el_rad * 180.0f / M_PI;
-    }
+    float horizontal_distance = sqrt(delta_x * delta_x + delta_y * delta_y);
 
-    float pan_error = az_deg - current_heading;
-    while (pan_error > 180.0f) {
-        pan_error -= 360.0f;
-    }
-    while (pan_error <= -180.0f) {
-        pan_error += 360.0f;
-    }
-
-    aiming_output_angles->pan_angle.angle = pan_error;
-    aiming_output_angles->tilt_angle.angle = elevation;
-
-    ininfo("Aiming: current_hdg=%.1f°, desired_az=%.1f°, pan_err=%.1f°, el=%.1f°\n", current_heading, az_deg, pan_error,
-           elevation);
+    /* We are using -90 to 90 degree angles (The datum, aka 0, will be the rocket). In pwm control, remember to add 90
+     * degrees to compensate for this! */
+    aiming_output_angles->tilt_angle.angle = atan2(delta_z, horizontal_distance) * (180.0 / M_PI);
 }
 
 void *aiming_main(void *args) {
@@ -131,13 +86,13 @@ void *aiming_main(void *args) {
         [TRACKER_MAG] = {.fd = -1, .events = POLLIN, .revents = 0},
         [TRACKER_BARO] = {.fd = -1, .events = POLLIN, .revents = 0},
         [ROCKET_GNSS] = {.fd = -1, .events = POLLIN, .revents = 0},
+        [ROCKET_ALT] = {.fd = -1, .events = POLLIN, .revents = 0},
+        [ROCKET_BARO] = {.fd = -1, .events = POLLIN, .revents = 0},
     };
 
     struct orb_metadata const *uorb_metas_in[] = {
-        [TRACKER_GNSS] = ORB_ID(sensor_gnss),
-        [TRACKER_MAG] = ORB_ID(sensor_mag),
-        [TRACKER_BARO] = ORB_ID(sensor_baro),
-        [ROCKET_GNSS] = ORB_ID(sensor_gnss),
+        [TRACKER_GNSS] = ORB_ID(sensor_gnss), [TRACKER_MAG] = ORB_ID(sensor_mag), [TRACKER_BARO] = ORB_ID(sensor_baro),
+        [ROCKET_GNSS] = ORB_ID(sensor_gnss),  [ROCKET_ALT] = ORB_ID(sensor_alt),  [ROCKET_BARO] = ORB_ID(sensor_baro),
     };
 
     for (int i = 0; i < sizeof(uorb_metas_in) / sizeof(uorb_metas_in[0]); i++) {
@@ -147,10 +102,12 @@ void *aiming_main(void *args) {
         }
     }
 
-    uorb_fds_in[TRACKER_GNSS].fd = orb_subscribe_multi(uorb_metas_in[TRACKER_GNSS], 0);
+    uorb_fds_in[TRACKER_GNSS].fd = orb_subscribe_multi(uorb_metas_in[TRACKER_GNSS], 1);
     uorb_fds_in[TRACKER_MAG].fd = orb_subscribe_multi(uorb_metas_in[TRACKER_MAG], 0);
-    uorb_fds_in[TRACKER_BARO].fd = orb_subscribe_multi(uorb_metas_in[TRACKER_BARO], 0);
-    uorb_fds_in[ROCKET_GNSS].fd = orb_subscribe_multi(uorb_metas_in[ROCKET_GNSS], 1);
+    uorb_fds_in[TRACKER_BARO].fd = orb_subscribe_multi(uorb_metas_in[TRACKER_BARO], 1);
+    uorb_fds_in[ROCKET_GNSS].fd = orb_subscribe_multi(uorb_metas_in[ROCKET_GNSS], 0);
+    uorb_fds_in[ROCKET_ALT].fd = orb_subscribe_multi(uorb_metas_in[ROCKET_ALT], 0);
+    uorb_fds_in[ROCKET_BARO].fd = orb_subscribe_multi(uorb_metas_in[ROCKET_BARO], 0);
 
     for (int i = 0; i < sizeof(uorb_fds_in) / sizeof(uorb_fds_in[0]); i++) {
         if (uorb_fds_in[i].fd < 0) {
@@ -191,16 +148,10 @@ void *aiming_main(void *args) {
     aiming_input_telem_t aiming_input_telem;
     memset(&aiming_input_telem, 0, sizeof(aiming_input_telem));
 
+    union uorb_sensor_buff_t uorb_sensor_buff[TELEM_SAMPLE_N];
+
     for (;;) {
-        aiming_output_angles_t aiming_output_angles;
-        aim_tracker(&aiming_input_telem, &aiming_output_angles);
-
-        orb_publish_multi(uorb_fds_out[PAN_ANGLE].fd, &aiming_output_angles.pan_angle,
-                          sizeof(aiming_output_angles.pan_angle));
-        orb_publish_multi(uorb_fds_out[TILT_ANGLE].fd, &aiming_output_angles.tilt_angle,
-                          sizeof(aiming_output_angles.tilt_angle));
-
-        err = poll(uorb_fds_in, sizeof(uorb_fds_in) / sizeof(uorb_fds_in[0]), 1000);
+        err = poll(uorb_fds_in, sizeof(uorb_fds_in) / sizeof(uorb_fds_in[0]), -1);
         if (err < 0) {
             inerr("Error polling uORB data: %s\n", strerror(err));
             continue;
@@ -212,34 +163,87 @@ void *aiming_main(void *args) {
                 continue;
             }
 
-            union uorb_sensor_buff_t uorb_sensor_buff;
-            err = orb_copy_multi(uorb_fds_in[i].fd, &uorb_sensor_buff, sizeof(uorb_sensor_buff));
+            err = orb_copy_multi(uorb_fds_in[i].fd, uorb_sensor_buff, sizeof(uorb_sensor_buff));
             if (err < 0) {
                 inerr("Error copying uORB data: %s\n", strerror(err));
                 continue;
             }
 
-            switch (i) {
-            case TRACKER_GNSS:
-                aiming_input_telem.tracker_gnss = uorb_sensor_buff.tracker_gnss;
-                ininfo("Tracker GNSS: %f, %f, %f\n", aiming_input_telem.tracker_gnss.latitude,
-                       aiming_input_telem.tracker_gnss.longitude, aiming_input_telem.tracker_gnss.altitude);
-                break;
-            case TRACKER_MAG:
-                aiming_input_telem.tracker_mag = uorb_sensor_buff.tracker_mag;
-                ininfo("Tracker MAG: %f, %f, %f\n", aiming_input_telem.tracker_mag.x, aiming_input_telem.tracker_mag.y,
-                       aiming_input_telem.tracker_mag.z);
-                break;
-            case TRACKER_BARO:
-                aiming_input_telem.tracker_baro = uorb_sensor_buff.tracker_baro;
-                ininfo("Tracker BARO: %f, %f\n", aiming_input_telem.tracker_baro.pressure,
-                       aiming_input_telem.tracker_baro.temperature);
-                break;
-            case ROCKET_GNSS:
-                aiming_input_telem.rocket_gnss = uorb_sensor_buff.rocket_gnss;
-                ininfo("Rocket GNSS: %f, %f, %f\n", aiming_input_telem.rocket_gnss.latitude,
-                       aiming_input_telem.rocket_gnss.longitude, aiming_input_telem.rocket_gnss.altitude);
-                break;
+            for (int j = 0; j < (err / uorb_metas_in[i]->o_size); j++) {
+                switch (i) {
+                case TRACKER_GNSS: {
+                    aiming_input_telem.tracker_gnss = uorb_sensor_buff[j].tracker_gnss;
+                    aiming_input_telem.tracker_gnss_n++;
+                    // ininfo("Tracker GNSS: %d, %f, %f\n", aiming_input_telem.tracker_gnss.timestamp,
+                    // aiming_input_telem.tracker_gnss.latitude, aiming_input_telem.tracker_gnss.longitude);
+                    break;
+                }
+                case TRACKER_MAG: {
+                    aiming_input_telem.tracker_mag = uorb_sensor_buff[j].tracker_mag;
+                    // ininfo("Tracker MAG: %d, %f, %f, %f\n", aiming_input_telem.tracker_mag.timestamp,
+                    // aiming_input_telem.tracker_mag.x, aiming_input_telem.tracker_mag.y,
+                    // aiming_input_telem.tracker_mag.z);
+                    break;
+                }
+                case TRACKER_BARO: {
+                    struct sensor_alt tracker_alt;
+                    calculate_altitude(&uorb_sensor_buff[j].tracker_baro, &tracker_alt);
+                    aiming_input_telem.tracker_alt = tracker_alt;
+                    aiming_input_telem.tracker_alt_n++;
+                    // ininfo("Tracker ALT: %d, %f\n", aiming_input_telem.tracker_alt.timestamp,
+                    // aiming_input_telem.tracker_alt.altitude);
+                    break;
+                }
+                case ROCKET_ALT: {
+                    if (aiming_input_telem.rocket_alt_n >= TELEM_SAMPLE_N) break;
+                    struct sensor_alt rocket_alt = uorb_sensor_buff[j].rocket_alt;
+                    aiming_input_telem.rocket_alt[aiming_input_telem.rocket_alt_n++] = rocket_alt;
+                    // ininfo("Rocket ALT: %d, %f\n", rocket_alt.timestamp, rocket_alt.altitude);
+                    break;
+                }
+                case ROCKET_GNSS: {
+                    if (aiming_input_telem.rocket_gnss_n >= TELEM_SAMPLE_N) break;
+                    struct sensor_gnss rocket_gnss = uorb_sensor_buff[j].rocket_gnss;
+                    aiming_input_telem.rocket_gnss[aiming_input_telem.rocket_gnss_n++] = rocket_gnss;
+                    // ininfo("Rocket GNSS:%d, %f, %f\n",rocket_gnss.timestamp, rocket_gnss.latitude,
+                    // rocket_gnss.longitude);
+                    break;
+                }
+                /* Temporary for fakesensor */
+                case ROCKET_BARO: {
+                    if (aiming_input_telem.rocket_alt_n >= TELEM_SAMPLE_N) break;
+                    struct sensor_alt rocket_alt_baro;
+                    calculate_altitude(&uorb_sensor_buff[j].rocket_baro, &rocket_alt_baro);
+                    aiming_input_telem.rocket_alt[aiming_input_telem.rocket_alt_n++] = rocket_alt_baro;
+                    // ininfo("Rocket ALT: %d, %f\n", rocket_alt_baro.timestamp, rocket_alt_baro.altitude);
+                    break;
+                }
+                }
+
+                if (aiming_input_telem.rocket_gnss_n == TELEM_SAMPLE_N &&
+                    aiming_input_telem.rocket_alt_n == TELEM_SAMPLE_N) {
+                    aiming_output_angles_t aiming_output_angles;
+
+                    /* TODO: remove this to get actual tracker data */
+                    struct sensor_alt tracker_alt = {.timestamp = 0, .altitude = 568.922241};
+                    struct sensor_gnss tracker_gnss = {.timestamp = 0, .latitude = 47.990833, .longitude = -81.851111};
+                    aiming_input_telem.tracker_alt = tracker_alt;
+                    aiming_input_telem.tracker_gnss = tracker_gnss;
+
+                    aim_tracker(&aiming_input_telem, 50, &aiming_output_angles);
+
+                    // orb_publish_multi(uorb_fds_out[PAN_ANGLE].fd, &aiming_output_angles.pan_angle,
+                    // sizeof(aiming_output_angles.pan_angle)); orb_publish_multi(uorb_fds_out[TILT_ANGLE].fd,
+                    // &aiming_output_angles.tilt_angle, sizeof(aiming_output_angles.tilt_angle));
+
+                    ininfo("PAN ANGLE %f\n", aiming_output_angles.pan_angle.angle);
+                    ininfo("TILT ANGLE %f\n", aiming_output_angles.tilt_angle.angle);
+
+                    aiming_input_telem.rocket_gnss_n = 0;
+                    aiming_input_telem.tracker_gnss_n = 0;
+                    aiming_input_telem.rocket_alt_n = 0;
+                    aiming_input_telem.tracker_alt_n = 0;
+                }
             }
         }
     }
