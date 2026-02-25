@@ -28,7 +28,10 @@ int mag_to_heading(struct sensor_mag *sensor_mag, float *heading) {
     float x_cal = sensor_mag->x - CONFIG_INSPACE_MAG_CALIB_X;
     float y_cal = sensor_mag->y - CONFIG_INSPACE_MAG_CALIB_Y;
 
-    float heading_rad = atan2f(x_cal, y_cal);
+    float x_norm = x_cal / CONFIG_INSPACE_MAG_CALIB_RADIUS_X;
+    float y_norm = y_cal / CONFIG_INSPACE_MAG_CALIB_RADIUS_Y;
+
+    float heading_rad = atan2f(x_norm, y_norm);
     float heading_deg = heading_rad * 180.0f / M_PI;
 
     heading_deg += CONFIG_INSPACE_MAG_DECLINATION;
@@ -177,6 +180,10 @@ void *aiming_main(void *args) {
                 }
                 case TRACKER_MAG: {
                     aiming_input_telem.tracker_mag = uorb_sensor_buff[j].tracker_mag;
+                    float heading;
+                    if (mag_to_heading(&aiming_input_telem.tracker_mag, &heading) == 0) {
+                        indebug("Tracker heading: %f\n", heading);
+                    }
                     break;
                 }
                 case TRACKER_BARO: {
