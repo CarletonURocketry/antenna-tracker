@@ -1,5 +1,6 @@
 #ifndef KINEMATICS_H
 #define KINEMATICS_H
+#include "aiming.h"
 #include "stdint.h"
 
 typedef struct {
