@@ -47,6 +47,38 @@ config INSPACE_TRACKER_SYSLOG_WARN
         default y
         depends on INSPACE_TRACKER
 
+config INSPACE_MAG_CALIB_X
+        int "Magnetometer hard-iron X offset"
+        default 0
+        depends on INSPACE_TRACKER
+
+config INSPACE_MAG_CALIB_Y
+        int "Magnetometer hard-iron Y offset"
+        default 0
+        depends on INSPACE_TRACKER
+
+config INSPACE_MAG_CALIB_Z
+        int "Magnetometer hard-iron Z offset"
+        default 0
+        depends on INSPACE_TRACKER
+
+config INSPACE_MAG_CALIB_RADIUS_X
+        int "Magnetometer soft-iron X radius"
+        default 1
+        depends on INSPACE_TRACKER
+
+config INSPACE_MAG_CALIB_RADIUS_Y
+        int "Magnetometer soft-iron Y radius"
+        default 1
+        depends on INSPACE_TRACKER
+
+config INSPACE_MAG_DECLINATION
+        int "Magnetic declination (degrees)"
+        default 0
+        depends on INSPACE_TRACKER
+        ---help---
+                Magnetic declination in degrees for heading correction.
+
 config INSPACE_TRACKER_PWM_FREQUENCY
         int "PWM Frequency"
         default 400

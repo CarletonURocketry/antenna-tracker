@@ -28,11 +28,8 @@ struct sensor_alt {
 
 typedef struct {
     struct sensor_gnss tracker_gnss;
-    int tracker_gnss_n;
     struct sensor_alt tracker_alt;
-    int tracker_alt_n;
     struct sensor_mag tracker_mag;
-    int tracker_mag_n;
     struct sensor_alt rocket_alt[TELEM_SAMPLE_N];
     int rocket_alt_n;
     struct sensor_gnss rocket_gnss[TELEM_SAMPLE_N];
