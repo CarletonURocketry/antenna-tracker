@@ -9,6 +9,13 @@
 
 #define TELEM_SAMPLE_N 10
 
+typedef struct {
+    float hard_iron_x;
+    float hard_iron_y;
+    float soft_radius_x;
+    float soft_radius_y;
+} mag_calib_t;
+
 void *aiming_main(void *args);
 
 /* UORB declarations for fused sensor data */
@@ -28,8 +35,17 @@ struct sensor_alt {
 
 typedef struct {
     struct sensor_gnss tracker_gnss;
-    struct sensor_alt tracker_alt;
+    int tracker_gnss_n;
+    struct sensor_accel tracker_accel;
+    int tracker_accel_n;
+    struct sensor_gyro tracker_gyro;
+    int tracker_gyro_n;
     struct sensor_mag tracker_mag;
+    int tracker_mag_n;
+    struct sensor_alt tracker_alt;
+    int tracker_alt_n;
+    float mag_heading_deg;
+    int mag_heading_n;
     struct sensor_alt rocket_alt[TELEM_SAMPLE_N];
     int rocket_alt_n;
     struct sensor_gnss rocket_gnss[TELEM_SAMPLE_N];
@@ -44,16 +60,28 @@ typedef struct {
 union uorb_sensor_buff_t {
     struct sensor_gnss tracker_gnss;
     struct sensor_mag tracker_mag;
+    struct sensor_accel tracker_accel;
+    struct sensor_gyro tracker_gyro;
     struct sensor_baro tracker_baro;
     struct sensor_gnss rocket_gnss;
     struct sensor_alt rocket_alt;
     struct sensor_baro rocket_baro; /* This is temporary for fakesensor */
 };
 
-enum uorb_sensors_in { TRACKER_GNSS, TRACKER_MAG, TRACKER_BARO, ROCKET_GNSS, ROCKET_ALT, ROCKET_BARO };
+enum uorb_sensors_in {
+    TRACKER_GNSS,
+    TRACKER_MAG,
+    TRACKER_ACCEL,
+    TRACKER_GYRO,
+    TRACKER_BARO,
+    ROCKET_GNSS,
+    ROCKET_ALT,
+    ROCKET_BARO
+};
 
 enum uorb_sensors_out { TILT_ANGLE, PAN_ANGLE };
 
+int mag_to_heading(struct sensor_mag *sensor_mag, const mag_calib_t *calib, float *heading);
 int calculate_altitude(struct sensor_baro *baro_data, struct sensor_alt *altitude);
 
 #endif
