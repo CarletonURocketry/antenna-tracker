@@ -1,15 +1,18 @@
 #include "movement.h"
 #include "../syslogging.h"
 #include "motor.h"
+#include <math.h>
 #include <poll.h>
 #include <pthread.h>
 #include <string.h>
+#include <time.h>
 #include <uORB/uORB.h>
 
-#define SERVO_MAX_STEP_DEG 3.0f
-#define SERVO_WRAP_BUFFER_DEG 10.0f
+#define SERVO_SPEED_DEG_PER_MS 0.1f
+#define SERVO_WRAP_BUFFER_DEG 10.0f /* buffer to prevent the servo from wrapping around the min and max angle */
 #define SERVO_HOME_ANGLE                                                                                               \
     (CONFIG_INSPACE_TRACKER_MIN_ANGLE + (CONFIG_INSPACE_TRACKER_MAX_ANGLE - CONFIG_INSPACE_TRACKER_MIN_ANGLE) / 2)
+#define SERVO_DEADBAND_DEG 1.0f /* deadband to prevent the servo from oscillating*/
 
 typedef struct {
     struct sensor_angle tilt_angle;
@@ -73,8 +76,11 @@ void *movement_main(void *args) {
     float current_pan = SERVO_HOME_ANGLE;
     float current_tilt = SERVO_HOME_ANGLE;
 
+    struct timespec last_step_time;
+    clock_gettime(CLOCK_MONOTONIC, &last_step_time);
+
     for (;;) {
-        err = poll(uorb_fds, sizeof(uorb_fds) / sizeof(uorb_fds[0]), 10);
+        err = poll(uorb_fds, sizeof(uorb_fds) / sizeof(uorb_fds[0]), 30);
         if (err < 0) {
             inerr("Error polling uORB data: %s\n", strerror(err));
             continue;
@@ -95,10 +101,10 @@ void *movement_main(void *args) {
 
             switch (i) {
             case PAN_ANGLE:
-                target_pan = uorb_sensor_buff.pan_angle.angle;
+                target_pan = uorb_sensor_buff.pan_angle.angle + 135.0f;
                 break;
             case TILT_ANGLE:
-                target_tilt = uorb_sensor_buff.tilt_angle.angle;
+                target_tilt = uorb_sensor_buff.tilt_angle.angle + 135.0f;
                 break;
             }
         }
@@ -115,35 +121,35 @@ void *movement_main(void *args) {
         if (target_pan < CONFIG_INSPACE_TRACKER_MIN_ANGLE) target_pan = CONFIG_INSPACE_TRACKER_MIN_ANGLE;
         if (target_pan > CONFIG_INSPACE_TRACKER_MAX_ANGLE) target_pan = CONFIG_INSPACE_TRACKER_MAX_ANGLE;
 
-        /* move servos towards target angle */
-        if (target_tilt != current_tilt) {
-            float tilt_step = target_tilt - current_tilt;
+        /* compute max step */
+        struct timespec now;
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        float elapsed_ms = (float)(now.tv_sec - last_step_time.tv_sec) * 1000.0f +
+                           (float)(now.tv_nsec - last_step_time.tv_nsec) / 1.0e6f;
+        last_step_time = now;
+        float max_step = elapsed_ms * SERVO_SPEED_DEG_PER_MS;
 
-            /* clip to max step */
-            if (tilt_step > SERVO_MAX_STEP_DEG) tilt_step = SERVO_MAX_STEP_DEG;
-            if (tilt_step < -SERVO_MAX_STEP_DEG) tilt_step = -SERVO_MAX_STEP_DEG;
+        /* move servos towards target angle */
+        float tilt_error = target_tilt - current_tilt;
+        if (fabsf(tilt_error) > SERVO_DEADBAND_DEG) {
+            float tilt_step = tilt_error > 0.0f ? fminf(tilt_error, max_step) : fmaxf(tilt_error, -max_step);
             current_tilt += tilt_step;
-            err = move_angle((int)current_tilt, 1);
+            err = move_angle((int)roundf(current_tilt), 1);
             if (err < 0) {
                 inerr("Failed to move tilt motor to angle %.1f: %s\n", current_tilt, strerror(err));
                 pthread_exit(NULL);
             }
-
-            ininfo("Tilt current %.1f, target %.1f\n", current_tilt, target_tilt);
         }
 
-        if (target_pan != current_pan) {
-            float pan_step = target_pan - current_pan;
-            if (pan_step > SERVO_MAX_STEP_DEG) pan_step = SERVO_MAX_STEP_DEG;
-            if (pan_step < -SERVO_MAX_STEP_DEG) pan_step = -SERVO_MAX_STEP_DEG;
+        float pan_error = target_pan - current_pan;
+        if (fabsf(pan_error) > SERVO_DEADBAND_DEG) {
+            float pan_step = pan_error > 0.0f ? fminf(pan_error, max_step) : fmaxf(pan_error, -max_step);
             current_pan += pan_step;
-            err = move_angle((int)current_pan, 0);
+            err = move_angle((int)roundf(current_pan), 0);
             if (err < 0) {
                 inerr("Failed to move pan motor to angle %.1f: %s\n", current_pan, strerror(err));
                 pthread_exit(NULL);
             }
-
-            ininfo("Pan current %.1f, target %.1f\n", current_pan, target_pan);
         }
     }
 
