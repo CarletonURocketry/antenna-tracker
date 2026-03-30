@@ -1,5 +1,6 @@
 #include "collection.h"
 #include "../packets/packet.h"
+#include "../syslogging.h"
 #include <fcntl.h>
 #include <poll.h>
 #include <pthread.h>
@@ -76,44 +77,50 @@ int parse_packet(uint8_t *buffer, ssize_t buff_len, struct pollfd uorb_fds_out[]
         for (int j = 0; j < block_hdr->count; j++) {
             switch (block_hdr->type) {
             case DATA_ALT_SEA: {
-                struct alt_blk_t *alt_blk = (struct alt_blk_t *)buffer + sizeof(blk_hdr_t) + block_size * j;
+                struct alt_blk_t *alt_blk =
+                    (struct alt_blk_t *)((uint8_t *)buffer + sizeof(blk_hdr_t) + block_size * j);
 
                 struct sensor_altitude altitude = {.timestamp =
                                                        parse_blk_timestamp_ms(header->timestamp, alt_blk->time_offset),
-                                                   .altitude = (float)alt_blk->altitude};
+                                                   .altitude = (float)alt_blk->altitude / 1000.0f};
 
-                ininfo("Time: %d - Alt: %d\n", altitude.timestamp, altitude.altitude);
+                ininfo("Time: %d - Alt: %.3f\n", altitude.timestamp, altitude.altitude);
                 orb_publish_multi(uorb_fds_out[ROCKET_ALT].fd, &altitude, sizeof(altitude));
                 break;
             }
             case DATA_LAT_LONG: {
-                struct coord_blk_t *coord_blk = (struct coord_blk_t *)buffer + sizeof(blk_hdr_t) + block_size * j;
+                struct coord_blk_t *coord_blk =
+                    (struct coord_blk_t *)((uint8_t *)buffer + sizeof(blk_hdr_t) + block_size * j);
 
                 struct sensor_gnss coord = {.timestamp =
                                                 parse_blk_timestamp_ms(header->timestamp, coord_blk->time_offset),
                                             .latitude = coord_blk->latitude,
                                             .longitude = coord_blk->longitude};
 
-                ininfo("Time: %d - Lat: %d - Long: %d\n", coord.timestamp, coord.latitude, coord.longitude);
+                ininfo("Time: %d - Lat: %.6f - Long: %.6f\n", coord.timestamp, coord.latitude / 10000000.0f,
+                       coord.longitude / 10000000.0f);
                 orb_publish_multi(uorb_fds_out[ROCKET_GNSS].fd, &coord, sizeof(coord));
                 break;
             }
             case DATA_ANGULAR_VEL: {
-                struct ang_vel_blk_t *ang_vel_blk = (struct ang_vel_blk_t *)buffer + sizeof(blk_hdr_t) + block_size * j;
+                struct ang_vel_blk_t *ang_vel_blk =
+                    (struct ang_vel_blk_t *)((uint8_t *)buffer + sizeof(blk_hdr_t) + block_size * j);
                 ininfo("Angular Velocity - Time: %d - X: %d - Y: %d - Z: %d\n",
                        parse_blk_timestamp_ms(header->timestamp, ang_vel_blk->time_offset), ang_vel_blk->x,
                        ang_vel_blk->y, ang_vel_blk->z);
                 break;
             }
             case DATA_ACCEL_REL: {
-                struct accel_blk_t *accel_blk = (struct accel_blk_t *)buffer + sizeof(blk_hdr_t) + block_size * j;
+                struct accel_blk_t *accel_blk =
+                    (struct accel_blk_t *)((uint8_t *)buffer + sizeof(blk_hdr_t) + block_size * j);
                 ininfo("Acceleration - Time: %d - X: %d - Y: %d - Z: %d\n",
                        parse_blk_timestamp_ms(header->timestamp, accel_blk->time_offset), accel_blk->x, accel_blk->y,
                        accel_blk->z);
                 break;
             }
             case DATA_MAGNETIC: {
-                struct mag_blk_t *mag_blk = (struct mag_blk_t *)buffer + sizeof(blk_hdr_t) + block_size * j;
+                struct mag_blk_t *mag_blk =
+                    (struct mag_blk_t *)((uint8_t *)buffer + sizeof(blk_hdr_t) + block_size * j);
                 ininfo("Magnetic - Time: %d - X: %d - Y: %d - Z: %d\n",
                        parse_blk_timestamp_ms(header->timestamp, mag_blk->time_offset), mag_blk->x, mag_blk->y,
                        mag_blk->z);
@@ -199,9 +206,14 @@ void *collection_main(void *args) {
         if (b_read < 0) {
             err = errno;
             inerr("Error receiving from radio: %d\n", err);
+            if (err == EAGAIN) {
+                continue;
+            }
+
             goto err_cleanup;
         }
 
+        ininfo("Received packet: %d bytes\n", b_read);
         err = parse_packet(buffer, b_read, uorb_fds_out);
         if (err < 0) {
             inerr("Error parsing packet: %d\n", err);

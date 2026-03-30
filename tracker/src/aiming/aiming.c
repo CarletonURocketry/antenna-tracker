@@ -39,8 +39,8 @@ void aim_tracker(aiming_input_telem_t *aiming_input_telem, uint16_t time_offset_
                  aiming_output_angles_t *aiming_output_angles, float north_offset) {
     float last_rocket_alt = aiming_input_telem->rocket_alt[aiming_input_telem->rocket_alt_n - 1].altitude;
 
-    // pos_vec_t avg_vel = {0, 0, 0};
-    // pos_vec_t avg_accel = {0, 0, 0};
+    pos_vec_t avg_vel = {0, 0, 0};
+    pos_vec_t avg_accel = {0, 0, 0};
     utm_coord_t last_rocket_pos;
 
     latlon_to_utm(aiming_input_telem->rocket_gnss[aiming_input_telem->rocket_gnss_n - 1].latitude,
@@ -180,10 +180,6 @@ void *aiming_main(void *args) {
                 case TRACKER_MAG: {
                     aiming_input_telem.tracker_mag = uorb_sensor_buff[j].tracker_mag;
                     aiming_input_telem.tracker_mag_n = 1;
-                    float heading;
-                    if (mag_to_heading(&aiming_input_telem.tracker_mag, &calib, &heading) == 0) {
-                        ininfo("Heading: %.1f deg\n", heading);
-                    }
                     break;
                 }
                 case ROCKET_ALT: {

@@ -189,5 +189,6 @@ int main(void) {
 
     pthread_join(aiming_thread, NULL);
     pthread_join(movement_thread, NULL);
+    pthread_join(collection_thread, NULL);
     return 0;
 }
