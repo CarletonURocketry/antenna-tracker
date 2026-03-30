@@ -8,6 +8,7 @@
 #define CONFIG_INSPACE_TRACKER_SYSLOG_ERR 1
 #define CONFIG_INSPACE_TRACKER_SYSLOG_WARN 1
 // #define CONFIG_INSPACE_TRACKER_SYSLOG_PATH "antenna-tracker.log"
+#define CONFIG_INSPACE_TRACKER_RADIO_MOCK 1
 #endif
 
 #include "syslogging.h"
