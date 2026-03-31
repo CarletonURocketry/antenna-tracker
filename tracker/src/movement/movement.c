@@ -8,7 +8,7 @@
 #include <time.h>
 #include <uORB/uORB.h>
 
-#define SERVO_SPEED_DEG_PER_MS 0.1f
+#define SERVO_SPEED_DEG_PER_MS 0.07f
 #define SERVO_WRAP_BUFFER_DEG 10.0f /* buffer to prevent the servo from wrapping around the min and max angle */
 #define PAN_SERVO_HOME_ANGLE                                                                                           \
     (CONFIG_INSPACE_TRACKER_MIN_ANGLE + (CONFIG_INSPACE_TRACKER_MAX_ANGLE - CONFIG_INSPACE_TRACKER_MIN_ANGLE) / 2)
@@ -79,7 +79,7 @@ void *movement_main(void *args) {
     clock_gettime(CLOCK_MONOTONIC, &last_step_time);
 
     for (;;) {
-        err = poll(uorb_fds, sizeof(uorb_fds) / sizeof(uorb_fds[0]), 30);
+        err = poll(uorb_fds, sizeof(uorb_fds) / sizeof(uorb_fds[0]), 10);
         if (err < 0) {
             inerr("Error polling uORB data: %s\n", strerror(err));
             continue;
