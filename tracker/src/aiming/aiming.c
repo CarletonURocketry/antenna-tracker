@@ -39,25 +39,29 @@ void aim_tracker(aiming_input_telem_t *aiming_input_telem, uint16_t time_offset_
                  aiming_output_angles_t *aiming_output_angles, float north_offset) {
     float last_rocket_alt = aiming_input_telem->rocket_alt[aiming_input_telem->rocket_alt_n - 1].altitude;
 
-    pos_vec_t avg_vel = {0, 0, 0};
-    pos_vec_t avg_accel = {0, 0, 0};
+    // pos_vec_t avg_vel = {0, 0, 0};
+    // pos_vec_t avg_accel = {0, 0, 0};
     utm_coord_t last_rocket_pos;
 
     latlon_to_utm(aiming_input_telem->rocket_gnss[aiming_input_telem->rocket_gnss_n - 1].latitude,
                   aiming_input_telem->rocket_gnss[aiming_input_telem->rocket_gnss_n - 1].longitude, &last_rocket_pos);
 
-    utm_coord_t last_tracker_pos;
+    utm_coord_t tracker_coord_utm;
     latlon_to_utm(aiming_input_telem->tracker_gnss.latitude, aiming_input_telem->tracker_gnss.longitude,
-                  &last_tracker_pos);
+                  &tracker_coord_utm);
 
-    float predicted_x = const_accel_eq(time_offset_ms, avg_vel.x, avg_accel.x, last_rocket_pos.x);
-    float predicted_y = const_accel_eq(time_offset_ms, avg_vel.y, avg_accel.y, last_rocket_pos.y);
-    float predicted_z = const_accel_eq(time_offset_ms, avg_vel.z, avg_accel.z, last_rocket_alt);
+    // float predicted_x = const_accel_eq(time_offset_ms, avg_vel.x, avg_accel.x, last_rocket_pos.x);
+    // float predicted_y = const_accel_eq(time_offset_ms, avg_vel.y, avg_accel.y, last_rocket_pos.y);
+    // float predicted_z = const_accel_eq(time_offset_ms, avg_vel.z, avg_accel.z, last_rocket_alt);
 
     // Change in pos between rocket pos and tracker pos
-    float delta_x = predicted_x - last_tracker_pos.x;
-    float delta_y = predicted_y - last_tracker_pos.y;
-    float delta_z = predicted_z - aiming_input_telem->tracker_alt.altitude;
+    // float delta_x = predicted_x - last_tracker_pos.x;
+    // float delta_y = predicted_y - last_tracker_pos.y;
+    // float delta_z = predicted_z - aiming_input_telem->tracker_alt.altitude;
+
+    float delta_x = last_rocket_pos.x - tracker_coord_utm.x;
+    float delta_y = last_rocket_pos.y - tracker_coord_utm.y;
+    float delta_z = last_rocket_alt - aiming_input_telem->tracker_alt.altitude;
 
     float bearing_deg = atan2f(delta_x, delta_y) * (180.0f / M_PI);
     if (bearing_deg < 0.0f) bearing_deg += 360.0f;
@@ -85,8 +89,9 @@ void *aiming_main(void *args) {
     };
 
     struct orb_metadata const *uorb_metas_in[] = {
-        [TRACKER_GNSS] = ORB_ID(sensor_gnss), [TRACKER_MAG] = ORB_ID(sensor_mag), [TRACKER_BARO] = ORB_ID(sensor_baro),
-        [ROCKET_GNSS] = ORB_ID(sensor_gnss),  [ROCKET_ALT] = ORB_ID(sensor_alt),  [ROCKET_BARO] = ORB_ID(sensor_baro),
+        [TRACKER_GNSS] = ORB_ID(sensor_gnss),   [TRACKER_MAG] = ORB_ID(sensor_mag),
+        [TRACKER_BARO] = ORB_ID(sensor_baro),   [ROCKET_GNSS] = ORB_ID(sensor_gnss),
+        [ROCKET_ALT] = ORB_ID(sensor_altitude), [ROCKET_BARO] = ORB_ID(sensor_baro),
     };
 
     for (int i = 0; i < sizeof(uorb_metas_in) / sizeof(uorb_metas_in[0]); i++) {
@@ -100,7 +105,7 @@ void *aiming_main(void *args) {
     uorb_fds_in[TRACKER_MAG].fd = orb_subscribe_multi(uorb_metas_in[TRACKER_MAG], 0);
     uorb_fds_in[TRACKER_BARO].fd = orb_subscribe_multi(uorb_metas_in[TRACKER_BARO], 0);
     uorb_fds_in[ROCKET_GNSS].fd = orb_subscribe_multi(uorb_metas_in[ROCKET_GNSS], 1);
-    uorb_fds_in[ROCKET_ALT].fd = orb_subscribe_multi(uorb_metas_in[ROCKET_ALT], 1);
+    uorb_fds_in[ROCKET_ALT].fd = orb_subscribe_multi(uorb_metas_in[ROCKET_ALT], 0);
     uorb_fds_in[ROCKET_BARO].fd = orb_subscribe_multi(uorb_metas_in[ROCKET_BARO], 1);
 
     for (int i = 0; i < sizeof(uorb_fds_in) / sizeof(uorb_fds_in[0]); i++) {
@@ -184,7 +189,7 @@ void *aiming_main(void *args) {
                 }
                 case ROCKET_ALT: {
                     if (aiming_input_telem.rocket_alt_n >= TELEM_SAMPLE_N) break;
-                    struct sensor_alt rocket_alt = uorb_sensor_buff[j].rocket_alt;
+                    struct sensor_altitude rocket_alt = uorb_sensor_buff[j].rocket_alt;
                     aiming_input_telem.rocket_alt[aiming_input_telem.rocket_alt_n++] = rocket_alt;
                     break;
                 }
@@ -199,30 +204,46 @@ void *aiming_main(void *args) {
                     if (aiming_input_telem.rocket_alt_n >= TELEM_SAMPLE_N) break;
                     struct sensor_alt rocket_alt_baro;
                     calculate_altitude(&uorb_sensor_buff[j].rocket_baro, &rocket_alt_baro);
-                    aiming_input_telem.rocket_alt[aiming_input_telem.rocket_alt_n++] = rocket_alt_baro;
+                    aiming_input_telem.rocket_alt[aiming_input_telem.rocket_alt_n++] = (struct sensor_altitude){
+                        .timestamp = rocket_alt_baro.timestamp, .altitude = rocket_alt_baro.altitude};
                     break;
                 }
                 }
 
-                /* hardcoded to the bay */
-                aiming_input_telem.tracker_gnss.latitude = 45.384818f;
-                aiming_input_telem.tracker_gnss.longitude = -75.698504f;
-                aiming_input_telem.tracker_gnss_n = 1;
+                if (aiming_input_telem.rocket_gnss_n > 0 && aiming_input_telem.rocket_alt_n > 0) {
+                    /* Launch Canada basics GSE coords */
+                    aiming_input_telem.tracker_gnss.latitude = 47.990478f;
+                    aiming_input_telem.tracker_gnss.longitude = -81.851072f;
+                    aiming_input_telem.tracker_gnss_n = 1;
 
-                /* parlament */
-                aiming_input_telem.rocket_gnss[0].latitude = 45.388466f;
-                aiming_input_telem.rocket_gnss[0].longitude = -75.711046f;
-                aiming_input_telem.rocket_gnss_n = 1;
+                    aiming_input_telem.tracker_alt.altitude = 1381.4f;
+                    aiming_input_telem.tracker_alt_n = 1;
 
-                aiming_input_telem.tracker_alt.altitude = 0.0f;
-                aiming_input_telem.tracker_alt_n = 1;
-                aiming_input_telem.rocket_alt[0].altitude = 0.0f;
-                aiming_input_telem.rocket_alt_n = 1;
+                    aiming_output_angles_t out;
+                    aim_tracker(&aiming_input_telem, 0, &out, calib.north_offset);
 
-                aiming_output_angles_t out;
-                aim_tracker(&aiming_input_telem, 0, &out, calib.north_offset);
-                struct sensor_angle pan_angle = {.angle = out.pan_angle.angle};
-                orb_publish_multi(uorb_fds_out[PAN_ANGLE].fd, &pan_angle, sizeof(pan_angle));
+                    struct sensor_angle pan_angle = {.angle = out.pan_angle.angle};
+                    orb_publish_multi(uorb_fds_out[PAN_ANGLE].fd, &pan_angle, sizeof(pan_angle));
+
+                    struct sensor_angle tilt_angle = {.angle = out.tilt_angle.angle};
+                    orb_publish_multi(uorb_fds_out[TILT_ANGLE].fd, &tilt_angle, sizeof(tilt_angle));
+
+                    /* list the inputs and the outputs */
+                    ininfo("Tracker GNSS: Lat: %.6f, Long: %.6f\n", aiming_input_telem.tracker_gnss.latitude,
+                           aiming_input_telem.tracker_gnss.longitude);
+                    ininfo("Tracker Alt: %.3f\n", aiming_input_telem.tracker_alt.altitude);
+                    ininfo("Rocket GNSS: Lat: %.6f, Long: %.6f\n",
+                           aiming_input_telem.rocket_gnss[aiming_input_telem.rocket_gnss_n - 1].latitude,
+                           aiming_input_telem.rocket_gnss[aiming_input_telem.rocket_gnss_n - 1].longitude);
+                    ininfo("Rocket Alt: %.3f\n",
+                           aiming_input_telem.rocket_alt[aiming_input_telem.rocket_alt_n - 1].altitude);
+                    ininfo("Pan Angle: %.1f\n", out.pan_angle.angle);
+                    ininfo("Tilt Angle: %.1f\n", out.tilt_angle.angle);
+                    ininfo("--------------------------------\n");
+
+                    aiming_input_telem.rocket_alt_n = 0;
+                    aiming_input_telem.rocket_gnss_n = 0;
+                }
             }
         }
     }

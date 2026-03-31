@@ -1,3 +1,4 @@
+#include "../collection/collection.h"
 #include <uORB/uORB.h>
 
 #ifndef _INSPACE_TRACKER_AIMING_H_
@@ -7,7 +8,7 @@
 #define ROCKET_SAMPLE_DT_MS 50
 #define ITERATIONS 10
 
-#define TELEM_SAMPLE_N 10
+#define TELEM_SAMPLE_N 1
 
 typedef struct {
     float hard_iron_x;
@@ -41,7 +42,7 @@ typedef struct {
     int tracker_mag_n;
     struct sensor_alt tracker_alt;
     int tracker_alt_n;
-    struct sensor_alt rocket_alt[TELEM_SAMPLE_N];
+    struct sensor_altitude rocket_alt[TELEM_SAMPLE_N];
     int rocket_alt_n;
     struct sensor_gnss rocket_gnss[TELEM_SAMPLE_N];
     int rocket_gnss_n;
@@ -57,7 +58,7 @@ union uorb_sensor_buff_t {
     struct sensor_mag tracker_mag;
     struct sensor_baro tracker_baro;
     struct sensor_gnss rocket_gnss;
-    struct sensor_alt rocket_alt;
+    struct sensor_altitude rocket_alt;
     struct sensor_baro rocket_baro; /* This is temporary for fakesensor */
 };
 

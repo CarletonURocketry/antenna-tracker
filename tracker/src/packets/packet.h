@@ -51,6 +51,9 @@ typedef struct {
 
 void pkt_hdr_init(pkt_hdr_t *p, uint8_t packet_number, uint32_t mission_time);
 
+/* True if header call_sign matches CONFIG_INSPACE_TRACKER_TELEMETRY_CALLSIGN and trailing pad ('0' / NUL). */
+int pkt_hdr_callsign_matches(const pkt_hdr_t *hdr);
+
 /* Each block in the radio packet will have a header in this format. */
 typedef struct {
     /* The type of this block. */

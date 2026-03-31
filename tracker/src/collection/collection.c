@@ -63,9 +63,10 @@ int configure_radio(int fd, struct radio_options const *config) {
 
 int parse_packet(uint8_t *buffer, ssize_t buff_len, struct pollfd uorb_fds_out[]) {
     pkt_hdr_t *header = (pkt_hdr_t *)buffer;
-    /* There was a bug where instead of padding the call sign with null terminators we just padded wiht ascii 0's,
-       as a workaround for now we can assume the call sign len is always 6 chars
-    */
+    if (!pkt_hdr_callsign_matches(header)) {
+        inwarn("Incoming packet from callsign %s, skipping\n", header->call_sign);
+        return 0;
+    }
 
     buffer += sizeof(pkt_hdr_t);
 
@@ -84,7 +85,7 @@ int parse_packet(uint8_t *buffer, ssize_t buff_len, struct pollfd uorb_fds_out[]
                                                        parse_blk_timestamp_ms(header->timestamp, alt_blk->time_offset),
                                                    .altitude = (float)alt_blk->altitude / 1000.0f};
 
-                ininfo("Time: %d - Alt: %.3f\n", altitude.timestamp, altitude.altitude);
+                indebug("Time: %d - Alt: %.3f\n", altitude.timestamp, altitude.altitude);
                 orb_publish_multi(uorb_fds_out[ROCKET_ALT].fd, &altitude, sizeof(altitude));
                 break;
             }
@@ -94,11 +95,10 @@ int parse_packet(uint8_t *buffer, ssize_t buff_len, struct pollfd uorb_fds_out[]
 
                 struct sensor_gnss coord = {.timestamp =
                                                 parse_blk_timestamp_ms(header->timestamp, coord_blk->time_offset),
-                                            .latitude = coord_blk->latitude,
-                                            .longitude = coord_blk->longitude};
+                                            .latitude = coord_blk->latitude / 10000000.0f,
+                                            .longitude = coord_blk->longitude / 10000000.0f};
 
-                ininfo("Time: %d - Lat: %.6f - Long: %.6f\n", coord.timestamp, coord.latitude / 10000000.0f,
-                       coord.longitude / 10000000.0f);
+                indebug("Time: %d - Lat: %.6f - Long: %.6f\n", coord.timestamp, coord.latitude, coord.longitude);
                 orb_publish_multi(uorb_fds_out[ROCKET_GNSS].fd, &coord, sizeof(coord));
                 break;
             }
@@ -201,23 +201,19 @@ void *collection_main(void *args) {
     ssize_t b_read;
 
     for (;;) {
-        ininfo("Waiting for packet...\n");
         b_read = read(radio_fd, buffer, sizeof(buffer));
         if (b_read < 0) {
             err = errno;
             inerr("Error receiving from radio: %d\n", err);
-            if (err == EAGAIN) {
-                continue;
-            }
 
-            goto err_cleanup;
+            // goto err_cleanup;
         }
 
-        ininfo("Received packet: %d bytes\n", b_read);
-        err = parse_packet(buffer, b_read, uorb_fds_out);
-        if (err < 0) {
-            inerr("Error parsing packet: %d\n", err);
+        if (b_read >= (ssize_t)sizeof(pkt_hdr_t)) {
+            ininfo("Received packet: %zd bytes, seq %u\n", b_read, (unsigned)((pkt_hdr_t *)buffer)->packet_num);
         }
+
+        parse_packet(buffer, b_read, uorb_fds_out);
     }
 
 err_cleanup:

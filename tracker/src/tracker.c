@@ -1,6 +1,7 @@
 #include "tracker.h"
 #include "aiming/aiming.h"
 #include "collection/collection.h"
+#include "movement/motor.h"
 #include "movement/movement.h"
 #include <errno.h>
 #include <float.h>
@@ -169,8 +170,6 @@ int main(void) {
     if (err < 0) {
         inerr("Mag calibration failed, continuing without calib values\n");
     }
-
-    sleep(2);
 
     pthread_t collection_thread;
     ininfo("Starting collection\n");

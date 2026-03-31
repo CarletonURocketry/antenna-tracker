@@ -65,16 +65,23 @@ void *movement_main(void *args) {
         }
     }
 
-    /* homing the servos*/
-    move_angle(SERVO_HOME_ANGLE, 0);
-    move_angle(SERVO_HOME_ANGLE, 1);
-    /* wait for the servos to home, hardcoded since I don't have feedback, unsure on how to do this better */
-    sleep(2);
+    /* servo movement check */
+    move_angle(0, 0);
+    move_angle(0, 1);
+    sleep(1);
+    move_angle(270, 0);
+    move_angle(270, 1);
+    sleep(1);
+    move_angle(0, 0);
+    move_angle(0, 1);
+    sleep(1);
+    move_angle(135, 0);
+    sleep(1);
 
-    float target_pan = SERVO_HOME_ANGLE;
-    float target_tilt = SERVO_HOME_ANGLE;
-    float current_pan = SERVO_HOME_ANGLE;
-    float current_tilt = SERVO_HOME_ANGLE;
+    float target_pan = 135.0f;
+    float target_tilt = 0.0f;
+    float current_pan = 135.0f;
+    float current_tilt = 0.0f;
 
     struct timespec last_step_time;
     clock_gettime(CLOCK_MONOTONIC, &last_step_time);
@@ -104,7 +111,7 @@ void *movement_main(void *args) {
                 target_pan = uorb_sensor_buff.pan_angle.angle + 135.0f;
                 break;
             case TILT_ANGLE:
-                target_tilt = uorb_sensor_buff.tilt_angle.angle + 135.0f;
+                target_tilt = uorb_sensor_buff.tilt_angle.angle * 3.0f;
                 break;
             }
         }
