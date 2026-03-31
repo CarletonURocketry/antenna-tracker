@@ -15,7 +15,7 @@ typedef struct {
     float hard_iron_y;
     float soft_radius_x;
     float soft_radius_y;
-    float north_offset; /* servo angle when mag heading is 0 */
+    float angle_correction;
 } mag_calib_t;
 
 void *aiming_main(void *args);

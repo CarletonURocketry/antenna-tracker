@@ -10,7 +10,7 @@
 
 #define SERVO_SPEED_DEG_PER_MS 0.1f
 #define SERVO_WRAP_BUFFER_DEG 10.0f /* buffer to prevent the servo from wrapping around the min and max angle */
-#define SERVO_HOME_ANGLE                                                                                               \
+#define PAN_SERVO_HOME_ANGLE                                                                                           \
     (CONFIG_INSPACE_TRACKER_MIN_ANGLE + (CONFIG_INSPACE_TRACKER_MAX_ANGLE - CONFIG_INSPACE_TRACKER_MIN_ANGLE) / 2)
 #define SERVO_DEADBAND_DEG 1.0f /* deadband to prevent the servo from oscillating*/
 
@@ -66,21 +66,13 @@ void *movement_main(void *args) {
     }
 
     /* servo movement check */
-    move_angle(0, 0);
+    move_angle(PAN_SERVO_HOME_ANGLE, 0);
     move_angle(0, 1);
-    sleep(1);
-    move_angle(270, 0);
-    move_angle(270, 1);
-    sleep(1);
-    move_angle(0, 0);
-    move_angle(0, 1);
-    sleep(1);
-    move_angle(135, 0);
     sleep(1);
 
-    float target_pan = 135.0f;
+    float target_pan = PAN_SERVO_HOME_ANGLE;
     float target_tilt = 0.0f;
-    float current_pan = 135.0f;
+    float current_pan = PAN_SERVO_HOME_ANGLE;
     float current_tilt = 0.0f;
 
     struct timespec last_step_time;
@@ -108,19 +100,24 @@ void *movement_main(void *args) {
 
             switch (i) {
             case PAN_ANGLE:
-                target_pan = uorb_sensor_buff.pan_angle.angle + 135.0f;
+                target_pan =
+                    CONFIG_INSPACE_TRACKER_MAX_ANGLE - uorb_sensor_buff.pan_angle.angle +
+                    PAN_SERVO_HOME_ANGLE; /* why this? angle needs to be inverted because the servo is upside
+                                            down, PAN_SERVO_HOME_ANGLE is added because that's the home position */
                 break;
             case TILT_ANGLE:
-                target_tilt = uorb_sensor_buff.tilt_angle.angle * 3.0f;
+                target_tilt =
+                    uorb_sensor_buff.tilt_angle.angle * 3.0f; /* the scaling is needed because we have a 3:1 gear ratio,
+                                                                 tilt gets scaled down to having a 0-90 degree range*/
                 break;
             }
         }
 
         /* correct both angles to be the closest to the middle of the range */
-        if (target_tilt - SERVO_HOME_ANGLE > 180.0f + SERVO_WRAP_BUFFER_DEG) target_tilt -= 360.0f;
-        if (target_tilt - SERVO_HOME_ANGLE < -(180.0f + SERVO_WRAP_BUFFER_DEG)) target_tilt += 360.0f;
-        if (target_pan - SERVO_HOME_ANGLE > 180.0f + SERVO_WRAP_BUFFER_DEG) target_pan -= 360.0f;
-        if (target_pan - SERVO_HOME_ANGLE < -(180.0f + SERVO_WRAP_BUFFER_DEG)) target_pan += 360.0f;
+        if (target_tilt - PAN_SERVO_HOME_ANGLE > 180.0f + SERVO_WRAP_BUFFER_DEG) target_tilt -= 360.0f;
+        if (target_tilt - PAN_SERVO_HOME_ANGLE < -(180.0f + SERVO_WRAP_BUFFER_DEG)) target_tilt += 360.0f;
+        if (target_pan - PAN_SERVO_HOME_ANGLE > 180.0f + SERVO_WRAP_BUFFER_DEG) target_pan -= 360.0f;
+        if (target_pan - PAN_SERVO_HOME_ANGLE < -(180.0f + SERVO_WRAP_BUFFER_DEG)) target_pan += 360.0f;
 
         /* clip to servo range */
         if (target_tilt < CONFIG_INSPACE_TRACKER_MIN_ANGLE) target_tilt = CONFIG_INSPACE_TRACKER_MIN_ANGLE;

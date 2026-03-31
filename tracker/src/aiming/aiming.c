@@ -36,7 +36,7 @@ int mag_to_heading(struct sensor_mag *sensor_mag, const mag_calib_t *calib, floa
 }
 
 void aim_tracker(aiming_input_telem_t *aiming_input_telem, uint16_t time_offset_ms,
-                 aiming_output_angles_t *aiming_output_angles, float north_offset) {
+                 aiming_output_angles_t *aiming_output_angles, float angle_correction) {
     float last_rocket_alt = aiming_input_telem->rocket_alt[aiming_input_telem->rocket_alt_n - 1].altitude;
 
     // pos_vec_t avg_vel = {0, 0, 0};
@@ -65,7 +65,8 @@ void aim_tracker(aiming_input_telem_t *aiming_input_telem, uint16_t time_offset_
 
     float bearing_deg = atan2f(delta_x, delta_y) * (180.0f / M_PI);
     if (bearing_deg < 0.0f) bearing_deg += 360.0f;
-    aiming_output_angles->pan_angle.angle = bearing_deg + north_offset;
+    aiming_output_angles->pan_angle.angle = bearing_deg + angle_correction;
+    ininfo("Bearing before correction: %.3f\n", bearing_deg);
 
     float horizontal_distance = sqrt(delta_x * delta_x + delta_y * delta_y);
 
@@ -185,6 +186,11 @@ void *aiming_main(void *args) {
                 case TRACKER_MAG: {
                     aiming_input_telem.tracker_mag = uorb_sensor_buff[j].tracker_mag;
                     aiming_input_telem.tracker_mag_n = 1;
+
+                    float heading;
+                    if (mag_to_heading(&aiming_input_telem.tracker_mag, &calib, &heading) != 0) {
+                        ininfo("Heading: %.3f\n", heading);
+                    }
                     break;
                 }
                 case ROCKET_ALT: {
@@ -212,15 +218,16 @@ void *aiming_main(void *args) {
 
                 if (aiming_input_telem.rocket_gnss_n > 0 && aiming_input_telem.rocket_alt_n > 0) {
                     /* Launch Canada basics GSE coords */
-                    aiming_input_telem.tracker_gnss.latitude = 47.990478f;
-                    aiming_input_telem.tracker_gnss.longitude = -81.851072f;
-                    aiming_input_telem.tracker_gnss_n = 1;
+                    // 47°56'41.53 "N 81°51'05.58" W
+                    // aiming_input_telem.tracker_gnss.latitude = 47.944869f;
+                    // aiming_input_telem.tracker_gnss.longitude = -81.851550f;
+                    // aiming_input_telem.tracker_gnss_n = 1;
 
-                    aiming_input_telem.tracker_alt.altitude = 1381.4f;
-                    aiming_input_telem.tracker_alt_n = 1;
+                    // aiming_input_telem.tracker_alt.altitude = 363.0f;
+                    // aiming_input_telem.tracker_alt_n = 1;
 
                     aiming_output_angles_t out;
-                    aim_tracker(&aiming_input_telem, 0, &out, calib.north_offset);
+                    aim_tracker(&aiming_input_telem, 0, &out, calib.angle_correction);
 
                     struct sensor_angle pan_angle = {.angle = out.pan_angle.angle};
                     orb_publish_multi(uorb_fds_out[PAN_ANGLE].fd, &pan_angle, sizeof(pan_angle));
