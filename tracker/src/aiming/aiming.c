@@ -66,7 +66,6 @@ void aim_tracker(aiming_input_telem_t *aiming_input_telem, uint16_t time_offset_
     float bearing_deg = atan2f(delta_x, delta_y) * (180.0f / M_PI);
     if (bearing_deg < 0.0f) bearing_deg += 360.0f;
     aiming_output_angles->pan_angle.angle = bearing_deg + angle_correction;
-    ininfo("Bearing before correction: %.3f\n", bearing_deg);
 
     float horizontal_distance = sqrt(delta_x * delta_x + delta_y * delta_y);
 
@@ -186,11 +185,6 @@ void *aiming_main(void *args) {
                 case TRACKER_MAG: {
                     aiming_input_telem.tracker_mag = uorb_sensor_buff[j].tracker_mag;
                     aiming_input_telem.tracker_mag_n = 1;
-
-                    float heading;
-                    if (mag_to_heading(&aiming_input_telem.tracker_mag, &calib, &heading) != 0) {
-                        ininfo("Heading: %.3f\n", heading);
-                    }
                     break;
                 }
                 case ROCKET_ALT: {
@@ -234,19 +228,6 @@ void *aiming_main(void *args) {
 
                     struct sensor_angle tilt_angle = {.angle = out.tilt_angle.angle};
                     orb_publish_multi(uorb_fds_out[TILT_ANGLE].fd, &tilt_angle, sizeof(tilt_angle));
-
-                    /* list the inputs and the outputs */
-                    ininfo("Tracker GNSS: Lat: %.6f, Long: %.6f\n", aiming_input_telem.tracker_gnss.latitude,
-                           aiming_input_telem.tracker_gnss.longitude);
-                    ininfo("Tracker Alt: %.3f\n", aiming_input_telem.tracker_alt.altitude);
-                    ininfo("Rocket GNSS: Lat: %.6f, Long: %.6f\n",
-                           aiming_input_telem.rocket_gnss[aiming_input_telem.rocket_gnss_n - 1].latitude,
-                           aiming_input_telem.rocket_gnss[aiming_input_telem.rocket_gnss_n - 1].longitude);
-                    ininfo("Rocket Alt: %.3f\n",
-                           aiming_input_telem.rocket_alt[aiming_input_telem.rocket_alt_n - 1].altitude);
-                    ininfo("Pan Angle: %.1f\n", out.pan_angle.angle);
-                    ininfo("Tilt Angle: %.1f\n", out.tilt_angle.angle);
-                    ininfo("--------------------------------\n");
 
                     aiming_input_telem.rocket_alt_n = 0;
                     aiming_input_telem.rocket_gnss_n = 0;

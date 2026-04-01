@@ -105,25 +105,25 @@ int parse_packet(uint8_t *buffer, ssize_t buff_len, struct pollfd uorb_fds_out[]
             case DATA_ANGULAR_VEL: {
                 struct ang_vel_blk_t *ang_vel_blk =
                     (struct ang_vel_blk_t *)((uint8_t *)buffer + sizeof(blk_hdr_t) + block_size * j);
-                ininfo("Angular Velocity - Time: %d - X: %d - Y: %d - Z: %d\n",
-                       parse_blk_timestamp_ms(header->timestamp, ang_vel_blk->time_offset), ang_vel_blk->x,
-                       ang_vel_blk->y, ang_vel_blk->z);
+                // ininfo("Angular Velocity - Time: %d - X: %d - Y: %d - Z: %d\n",
+                //    parse_blk_timestamp_ms(header->timestamp, ang_vel_blk->time_offset), ang_vel_blk->x,
+                //    ang_vel_blk->y, ang_vel_blk->z);
                 break;
             }
             case DATA_ACCEL_REL: {
                 struct accel_blk_t *accel_blk =
                     (struct accel_blk_t *)((uint8_t *)buffer + sizeof(blk_hdr_t) + block_size * j);
-                ininfo("Acceleration - Time: %d - X: %d - Y: %d - Z: %d\n",
-                       parse_blk_timestamp_ms(header->timestamp, accel_blk->time_offset), accel_blk->x, accel_blk->y,
-                       accel_blk->z);
+                // ininfo("Acceleration - Time: %d - X: %d - Y: %d - Z: %d\n",
+                //    parse_blk_timestamp_ms(header->timestamp, accel_blk->time_offset), accel_blk->x, accel_blk->y,
+                //    accel_blk->z);
                 break;
             }
             case DATA_MAGNETIC: {
                 struct mag_blk_t *mag_blk =
                     (struct mag_blk_t *)((uint8_t *)buffer + sizeof(blk_hdr_t) + block_size * j);
-                ininfo("Magnetic - Time: %d - X: %d - Y: %d - Z: %d\n",
-                       parse_blk_timestamp_ms(header->timestamp, mag_blk->time_offset), mag_blk->x, mag_blk->y,
-                       mag_blk->z);
+                // ininfo("Magnetic - Time: %d - X: %d - Y: %d - Z: %d\n",
+                //    parse_blk_timestamp_ms(header->timestamp, mag_blk->time_offset), mag_blk->x, mag_blk->y,
+                //    mag_blk->z);
                 break;
             }
             }
@@ -202,18 +202,34 @@ void *collection_main(void *args) {
 
     for (;;) {
         b_read = read(radio_fd, buffer, sizeof(buffer));
+        if (b_read == 0) {
+            continue;
+        }
+
         if (b_read < 0) {
             err = errno;
             inerr("Error receiving from radio: %d\n", err);
+            sleep(1);
+            close(radio_fd);
+            radio_fd = open(CONFIG_INSPACE_TRACKER_RADIO_PATH, O_RDWR);
+            if (radio_fd < 0) {
+                sleep(1);
+                continue;
+            }
+            configure_radio(radio_fd, &config);
 
-            // goto err_cleanup;
+            continue;
         }
 
-        if (b_read >= (ssize_t)sizeof(pkt_hdr_t)) {
-            ininfo("Received packet: %zd bytes, seq %u\n", b_read, (unsigned)((pkt_hdr_t *)buffer)->packet_num);
+        pkt_hdr_t *header = (pkt_hdr_t *)buffer;
+        if (b_read >= (ssize_t)sizeof(pkt_hdr_t) && pkt_hdr_callsign_matches(header)) {
+            printf("packet n");
+            for (ssize_t i = 0; i < b_read; i++) {
+                printf("%02x", buffer[i]);
+            }
+            printf("\n");
+            parse_packet(buffer, b_read, uorb_fds_out);
         }
-
-        parse_packet(buffer, b_read, uorb_fds_out);
     }
 
 err_cleanup:

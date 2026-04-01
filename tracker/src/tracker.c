@@ -225,7 +225,7 @@ int main(void) {
     }
 
     /* Wait for servos to home, there is probably a better way than just to sleep a hardcoded amount  */
-    sleep(2);
+    sleep(3);
 
     mag_calib_t calib = {.hard_iron_x = 0.0f,
                          .hard_iron_y = 0.0f,
