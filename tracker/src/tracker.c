@@ -58,39 +58,70 @@ static int run_mag_calibration(mag_calib_t *calib) {
     float max_y = -FLT_MAX;
 
     struct sensor_angle pan_cmd;
-    for (int pass = 0; pass < 1; pass++) {
-        pan_cmd.angle = 0;
-        orb_publish_multi(pan_fd, &pan_cmd, sizeof(pan_cmd));
-        usleep(1000 * 3000);
+    pan_cmd.angle = 135.0f;
+    orb_publish_multi(pan_fd, &pan_cmd, sizeof(pan_cmd));
 
-        for (float angle = CONFIG_INSPACE_TRACKER_MIN_ANGLE - 135.0f;
-             angle <= CONFIG_INSPACE_TRACKER_MAX_ANGLE - 135.0f; angle += 1.0f) {
-            pan_cmd.angle = angle;
-            orb_publish_multi(pan_fd, &pan_cmd, sizeof(pan_cmd));
+    struct timespec start;
+    clock_gettime(CLOCK_MONOTONIC, &start);
 
-            usleep(1000 * 10);
+    for (;;) {
+        int err = poll(&mag_poll, 1, 0);
+        if (err < 0) {
+            inerr("Error polling uORB: %s\n", strerror(errno));
+            continue;
+        }
 
-            int err = poll(&mag_poll, 1, 0);
+        struct timespec now;
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        if (now.tv_sec - start.tv_sec > 5) {
+            break;
+        }
+
+        if (mag_poll.revents & POLLIN) {
+            struct sensor_mag mag_data;
+            err = orb_copy(ORB_ID(sensor_mag), mag_fd, &mag_data);
             if (err < 0) {
-                inerr("Error polling uORB: %s\n", strerror(errno));
+                inerr("Error copying uORB data: %s\n", strerror(errno));
                 continue;
             }
 
-            if (mag_poll.revents & POLLIN) {
-                struct sensor_mag mag_data;
-                err = orb_copy(ORB_ID(sensor_mag), mag_fd, &mag_data);
-                if (err < 0) {
-                    inerr("Error copying uORB data: %s\n", strerror(errno));
-                    continue;
-                }
-
-                if (mag_data.x < min_x) min_x = mag_data.x;
-                if (mag_data.x > max_x) max_x = mag_data.x;
-                if (mag_data.y < min_y) min_y = mag_data.y;
-                if (mag_data.y > max_y) max_y = mag_data.y;
-            }
+            if (mag_data.x < min_x) min_x = mag_data.x;
+            if (mag_data.x > max_x) max_x = mag_data.x;
+            if (mag_data.y < min_y) min_y = mag_data.y;
+            if (mag_data.y > max_y) max_y = mag_data.y;
         }
     }
+
+    // struct sensor_angle pan_cmd;
+    // for (int pass = 0; pass < 1; pass++) {
+    //     for (float angle = CONFIG_INSPACE_TRACKER_MIN_ANGLE - 135.0f;
+    //          angle <= CONFIG_INSPACE_TRACKER_MAX_ANGLE - 135.0f; angle += 1.0f) {
+    //         pan_cmd.angle = angle;
+    //         orb_publish_multi(pan_fd, &pan_cmd, sizeof(pan_cmd));
+
+    //         usleep(1000 * 10);
+
+    //         int err = poll(&mag_poll, 1, 0);
+    //         if (err < 0) {
+    //             inerr("Error polling uORB: %s\n", strerror(errno));
+    //             continue;
+    //         }
+
+    //         if (mag_poll.revents & POLLIN) {
+    //             struct sensor_mag mag_data;
+    //             err = orb_copy(ORB_ID(sensor_mag), mag_fd, &mag_data);
+    //             if (err < 0) {
+    //                 inerr("Error copying uORB data: %s\n", strerror(errno));
+    //                 continue;
+    //             }
+
+    //             if (mag_data.x < min_x) min_x = mag_data.x;
+    //             if (mag_data.x > max_x) max_x = mag_data.x;
+    //             if (mag_data.y < min_y) min_y = mag_data.y;
+    //             if (mag_data.y > max_y) max_y = mag_data.y;
+    //         }
+    //     }
+    // }
 
     calib->hard_iron_x = (max_x + min_x) / 2.0f;
     calib->hard_iron_y = (max_y + min_y) / 2.0f;
@@ -103,7 +134,7 @@ static int run_mag_calibration(mag_calib_t *calib) {
 
     pan_cmd.angle = 0.0f;
     orb_publish_multi(pan_fd, &pan_cmd, sizeof(pan_cmd));
-    usleep(1000 * 2000);
+    usleep(1000 * 3000);
 
     float avg_heading;
     for (int i = 0; i < 5; i++) {
