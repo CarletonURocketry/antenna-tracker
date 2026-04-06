@@ -223,15 +223,6 @@ void *aiming_main(void *args) {
                     ininfo("Rocket Altitude: %f\n",
                            aiming_input_telem.rocket_alt[aiming_input_telem.rocket_alt_n - 1].altitude);
 
-                    /* Launch Canada basics GSE coords */
-                    // 47°56'41.53 "N 81°51'05.58" W
-                    // aiming_input_telem.tracker_gnss.latitude = 47.944869f;
-                    // aiming_input_telem.tracker_gnss.longitude = -81.851550f;
-                    // aiming_input_telem.tracker_gnss_n = 1;
-
-                    // aiming_input_telem.tracker_alt.altitude = 363.0f;
-                    // aiming_input_telem.tracker_alt_n = 1;
-
                     aiming_output_angles_t out;
                     aim_tracker(&aiming_input_telem, 0, &out, calib.angle_correction);
 
