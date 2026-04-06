@@ -85,7 +85,6 @@ int parse_packet(uint8_t *buffer, ssize_t buff_len, struct pollfd uorb_fds_out[]
                                                        parse_blk_timestamp_ms(header->timestamp, alt_blk->time_offset),
                                                    .altitude = (float)alt_blk->altitude / 1000.0f};
 
-                indebug("Time: %d - Alt: %.3f\n", altitude.timestamp, altitude.altitude);
                 orb_publish_multi(uorb_fds_out[ROCKET_ALT].fd, &altitude, sizeof(altitude));
                 break;
             }
@@ -98,32 +97,7 @@ int parse_packet(uint8_t *buffer, ssize_t buff_len, struct pollfd uorb_fds_out[]
                                             .latitude = coord_blk->latitude / 10000000.0f,
                                             .longitude = coord_blk->longitude / 10000000.0f};
 
-                indebug("Time: %d - Lat: %.6f - Long: %.6f\n", coord.timestamp, coord.latitude, coord.longitude);
                 orb_publish_multi(uorb_fds_out[ROCKET_GNSS].fd, &coord, sizeof(coord));
-                break;
-            }
-            case DATA_ANGULAR_VEL: {
-                struct ang_vel_blk_t *ang_vel_blk =
-                    (struct ang_vel_blk_t *)((uint8_t *)buffer + sizeof(blk_hdr_t) + block_size * j);
-                // ininfo("Angular Velocity - Time: %d - X: %d - Y: %d - Z: %d\n",
-                //    parse_blk_timestamp_ms(header->timestamp, ang_vel_blk->time_offset), ang_vel_blk->x,
-                //    ang_vel_blk->y, ang_vel_blk->z);
-                break;
-            }
-            case DATA_ACCEL_REL: {
-                struct accel_blk_t *accel_blk =
-                    (struct accel_blk_t *)((uint8_t *)buffer + sizeof(blk_hdr_t) + block_size * j);
-                // ininfo("Acceleration - Time: %d - X: %d - Y: %d - Z: %d\n",
-                //    parse_blk_timestamp_ms(header->timestamp, accel_blk->time_offset), accel_blk->x, accel_blk->y,
-                //    accel_blk->z);
-                break;
-            }
-            case DATA_MAGNETIC: {
-                struct mag_blk_t *mag_blk =
-                    (struct mag_blk_t *)((uint8_t *)buffer + sizeof(blk_hdr_t) + block_size * j);
-                // ininfo("Magnetic - Time: %d - X: %d - Y: %d - Z: %d\n",
-                //    parse_blk_timestamp_ms(header->timestamp, mag_blk->time_offset), mag_blk->x, mag_blk->y,
-                //    mag_blk->z);
                 break;
             }
             }
