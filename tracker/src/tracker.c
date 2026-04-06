@@ -203,7 +203,9 @@ static int run_mag_calibration(mag_calib_t *calib) {
     return 0;
 }
 
-int main(void) {
+int main(int argc, FAR char *argv[]) {
+    (void)argc;
+    (void)argv;
 
     int err;
     err = setup_syslogging();
