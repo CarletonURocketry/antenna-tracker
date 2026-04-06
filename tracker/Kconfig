@@ -1,8 +1,8 @@
 config INSPACE_TRACKER
-        tristate "Antenna Tracker"
+        tristate "InSpace Tracker"
         default y
         ---help---
-                Enable the Antenna Tracking app
+                Enable the InSpace Tracking app
 
 config INSPACE_TRACKER_PROGNAME
         string "Program name"
@@ -13,7 +13,7 @@ config INSPACE_TRACKER_PROGNAME
                 program is installed.
 
 config INSPACE_TRACKER_PRIORITY
-        int "Antenna tracker task priority"
+        int "InSpace tracker task priority"
         default 100
         depends on INSPACE_TRACKER
 
@@ -22,10 +22,22 @@ config INSPACE_TRACKER_STACKSIZE
         default DEFAULT_TASK_STACKSIZE
         depends on INSPACE_TRACKER
 
+config INSPACE_TRACKER_RADIO
+        bool "Enable radio"
+        default y
+        depends on INSPACE_TRACKER && !DESKTOP_BUILD
+
+config INSPACE_TRACKER_RADIO_PATH
+        string "Radio device path"
+        default "/dev/rn2483"
+        ---help---
+                The path identifier of the radio device for receiving.
+        depends on INSPACE_TRACKER_RADIO
+
 config INSPACE_TRACKER_TELEMETRY_CALLSIGN
-        string "Telemetry callsign"
+        string "HAM radio callsign"
         default "VA3ZZA"
-        depends on INSPACE_TRACKER
+        depends on INSPACE_TRACKER_RADIO
 
 config INSPACE_TRACKER_SYSLOG_INFO
         bool "Enable syslog info output"
@@ -45,31 +57,6 @@ config INSPACE_TRACKER_SYSLOG_ERR
 config INSPACE_TRACKER_SYSLOG_WARN
         bool "Enable syslog warning output"
         default y
-        depends on INSPACE_TRACKER
-
-config INSPACE_MAG_CALIB_X
-        int "Magnetometer hard-iron X offset"
-        default 0
-        depends on INSPACE_TRACKER
-
-config INSPACE_MAG_CALIB_Y
-        int "Magnetometer hard-iron Y offset"
-        default 0
-        depends on INSPACE_TRACKER
-
-config INSPACE_MAG_CALIB_Z
-        int "Magnetometer hard-iron Z offset"
-        default 0
-        depends on INSPACE_TRACKER
-
-config INSPACE_MAG_CALIB_RADIUS_X
-        int "Magnetometer soft-iron X radius"
-        default 1
-        depends on INSPACE_TRACKER
-
-config INSPACE_MAG_CALIB_RADIUS_Y
-        int "Magnetometer soft-iron Y radius"
-        default 1
         depends on INSPACE_TRACKER
 
 config INSPACE_MAG_DECLINATION
@@ -187,5 +174,4 @@ config INSPACE_TRACKER_MAX_DUTY_CYCLE
         depends on INSPACE_TRACKER
         ---help---
                 Specify the maximum PWM duty cycle percentage corresponding to the
-                maximum angle. 
-        depends on INSPACE_TRACKER
+                maximum angle.

@@ -16,6 +16,11 @@ static uint16_t calc_timestamp(uint32_t mission_time) {
     return timestamp;
 }
 
+/* Parses the block timestamp to global ms time */
+uint16_t parse_blk_timestamp_ms(uint16_t hdr_timestamp, uint16_t blk_timestamp) {
+    return hdr_timestamp * 30 * 1000 + blk_timestamp * 10;
+}
+
 /* Calculate the offset timestamp
  * @param mission_time The absolute mission time in milliseconds
  * @param abs_timestamp The abs time to get the offset from
@@ -57,6 +62,19 @@ static int16_t *block_timestamp(uint8_t *block_body) { return (int16_t *)(block_
  * @param packet_number The sequence number of this packet in the stream of
  * transmissions.
  */
+int pkt_hdr_callsign_matches(const pkt_hdr_t *hdr) {
+    const char *cfg = CONFIG_INSPACE_TRACKER_TELEMETRY_CALLSIGN;
+    size_t clen = strlen(cfg);
+
+    if (clen > sizeof(hdr->call_sign)) {
+        clen = sizeof(hdr->call_sign);
+    }
+    if (strncmp(hdr->call_sign, cfg, clen) != 0) {
+        return 0;
+    }
+    return 1;
+}
+
 void pkt_hdr_init(pkt_hdr_t *p, uint8_t packet_number, uint32_t mission_time) {
     // Don't include the null-terminator
     int callsign_length = sizeof(CONFIG_INSPACE_TRACKER_TELEMETRY_CALLSIGN) - 1;

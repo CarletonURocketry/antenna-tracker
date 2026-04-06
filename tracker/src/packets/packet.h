@@ -51,10 +51,14 @@ typedef struct {
 
 void pkt_hdr_init(pkt_hdr_t *p, uint8_t packet_number, uint32_t mission_time);
 
+/* True if header call_sign matches CONFIG_INSPACE_TRACKER_TELEMETRY_CALLSIGN and trailing pad ('0' / NUL). */
+int pkt_hdr_callsign_matches(const pkt_hdr_t *hdr);
+
 /* Each block in the radio packet will have a header in this format. */
 typedef struct {
     /* The type of this block. */
     uint8_t type;
+    uint8_t count;
 } TIGHTLY_PACKED blk_hdr_t;
 
 void blk_hdr_init(blk_hdr_t *b, const enum block_type_e type);
@@ -199,5 +203,7 @@ struct error_blk_t {
 } TIGHTLY_PACKED;
 
 void error_blk_init(struct error_blk_t *b, const uint8_t proc_id, const uint8_t error_code);
+
+uint16_t parse_blk_timestamp_ms(uint16_t hdr_timestamp, uint16_t blk_timestamp);
 
 #endif // _INSPACE_TELEMETRY_PACKET_H_
