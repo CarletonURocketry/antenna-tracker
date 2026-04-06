@@ -67,7 +67,7 @@ void *movement_main(void *args) {
 
     /* servo movement check */
     move_angle(0, 0);
-    move_angle(0, 1);
+    move_angle(270, 1);
     sleep(2);
 
     float target_pan = 0.0f;
