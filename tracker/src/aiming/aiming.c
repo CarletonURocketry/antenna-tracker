@@ -188,15 +188,16 @@ void *aiming_main(void *args) {
                     break;
                 }
                 case ROCKET_ALT: {
-                    if (aiming_input_telem.rocket_alt_n >= TELEM_SAMPLE_N) break;
                     struct sensor_altitude rocket_alt = uorb_sensor_buff[j].rocket_alt;
-                    aiming_input_telem.rocket_alt[aiming_input_telem.rocket_alt_n++] = rocket_alt;
+                    aiming_input_telem.rocket_alt[aiming_input_telem.rocket_alt_n] = rocket_alt;
+                    aiming_input_telem.rocket_alt_n = 1;
                     break;
                 }
                 case ROCKET_GNSS: {
-                    if (aiming_input_telem.rocket_gnss_n >= TELEM_SAMPLE_N) break;
                     struct sensor_gnss rocket_gnss = uorb_sensor_buff[j].rocket_gnss;
-                    aiming_input_telem.rocket_gnss[aiming_input_telem.rocket_gnss_n++] = rocket_gnss;
+                    aiming_input_telem.rocket_gnss[aiming_input_telem.rocket_gnss_n] = rocket_gnss;
+                    aiming_input_telem.rocket_gnss_n = 1;
+                    break;
                     break;
                 }
                 /* Temporary for fakesensor */
@@ -210,7 +211,18 @@ void *aiming_main(void *args) {
                 }
                 }
 
-                if (aiming_input_telem.rocket_gnss_n > 0 && aiming_input_telem.rocket_alt_n > 0) {
+                if (aiming_input_telem.rocket_gnss_n > 0 && aiming_input_telem.rocket_alt_n > 0 &&
+                    aiming_input_telem.tracker_gnss_n > 0 && aiming_input_telem.tracker_alt_n > 0) {
+
+                    ininfo("Tracker GNSS: %f, %f\n", aiming_input_telem.tracker_gnss.latitude,
+                           aiming_input_telem.tracker_gnss.longitude);
+                    ininfo("Tracker Altitude: %f\n", aiming_input_telem.tracker_alt.altitude);
+                    ininfo("Rocket GNSS: %f, %f\n",
+                           aiming_input_telem.rocket_gnss[aiming_input_telem.rocket_gnss_n - 1].latitude,
+                           aiming_input_telem.rocket_gnss[aiming_input_telem.rocket_gnss_n - 1].longitude);
+                    ininfo("Rocket Altitude: %f\n",
+                           aiming_input_telem.rocket_alt[aiming_input_telem.rocket_alt_n - 1].altitude);
+
                     /* Launch Canada basics GSE coords */
                     // 47°56'41.53 "N 81°51'05.58" W
                     // aiming_input_telem.tracker_gnss.latitude = 47.944869f;
@@ -228,9 +240,6 @@ void *aiming_main(void *args) {
 
                     struct sensor_angle tilt_angle = {.angle = out.tilt_angle.angle};
                     orb_publish_multi(uorb_fds_out[TILT_ANGLE].fd, &tilt_angle, sizeof(tilt_angle));
-
-                    aiming_input_telem.rocket_alt_n = 0;
-                    aiming_input_telem.rocket_gnss_n = 0;
                 }
             }
         }
